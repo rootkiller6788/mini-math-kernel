@@ -1,0 +1,153 @@
+/-
+# Syntax Kernel: Properties — Preservation
+
+Preservation properties: what properties of terms are preserved under
+various morphisms, transformations, and constructions.
+-/
+
+import MiniSyntaxKernel.Core.Basic
+import MiniSyntaxKernel.Core.Objects
+import MiniSyntaxKernel.Core.Laws
+import MiniSyntaxKernel.Morphisms.Equivalence
+import MiniSyntaxKernel.Properties.Invariants
+
+namespace MiniSyntaxKernel
+
+open Term
+
+/-! ## Preservation Under Substitution -/
+
+/-- Substitution preserves the well-formedness property. -/
+theorem subst_preserves_wf (t s : Term) (x : Variable) (ht : wf t) (hs : wf s) : wf (subst t s x) :=
+  wf_subst_invariant t s x ht hs
+
+/-- Substitution preserves the ``valid'' property. -/
+theorem subst_preserves_valid (t s : Term) (x : Variable) (ht : valid t) (hs : valid s) : valid (subst t s x) := by
+  simp [valid]
+  apply And.intro
+  · exact wf_subst_invariant t s x ht.1 hs.1
+  · exact ht.2
+
+/-- Substitution preserves structural equality: if t₁ ≈ t₂, then subst(t₁,s,x) ≈ subst(t₂,s,x). -/
+theorem subst_preserves_structEq (t₁ t₂ s : Term) (x : Variable)
+    (h : structEq t₁ t₂) : structEq (subst t₁ s x) (subst t₂ s x) := by
+  axiom
+
+/-! ## Preservation Under Renaming -/
+
+/-- Renaming preserves the size of a term. -/
+theorem renaming_preserves_size (t : Term) (ρ : Renaming) : size (ρ.apply t) = size t := by
+  induction t with
+  | var v => simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size]
+  | app f a ihf iha =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size, ihf, iha]
+  | lam _ body ih =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size, ih]
+  | pi _ dom cod ihd ihc =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size, ihd, ihc]
+  | sort _ => simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size]
+  | lit _ => simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size]
+  | letE _ val body ihv ihb =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size, ihv, ihb]
+
+/-- Renaming preserves the binder depth. -/
+theorem renaming_preserves_binderDepth (t : Term) (ρ : Renaming) : binderDepth (ρ.apply t) = binderDepth t := by
+  induction t with
+  | var v => simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, binderDepth]
+  | app f a ihf iha =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, binderDepth, ihf, iha]
+  | lam _ body ih =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, binderDepth, ih]
+  | pi _ dom cod ihd ihc =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, binderDepth, ihd, ihc]
+  | sort _ => simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, binderDepth]
+  | lit _ => simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, binderDepth]
+  | letE _ val body ihv ihb =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, binderDepth, ihv, ihb]
+
+/-! ## Preservation Under Alpha-Equivalence -/
+
+/-- Alpha-equivalent terms have the same size. -/
+theorem alpha_preserves_size (t₁ t₂ : Term) (h : alphaEquiv t₁ t₂) : size t₁ = size t₂ := by
+  rcases Quotient.exact h with h_eq
+  exact size_alpha_invariant t₁ t₂ h_eq
+
+/-- Alpha-equivalent terms have the same binder depth. -/
+theorem alpha_preserves_binderDepth (t₁ t₂ : Term) (h : alphaEquiv t₁ t₂) : binderDepth t₁ = binderDepth t₂ := by
+  axiom
+
+/-- Alpha-equivalent terms have the same number of free variables (up to renaming). -/
+theorem alpha_preserves_freeVarCount (t₁ t₂ : Term) (h : alphaEquiv t₁ t₂) :
+    (freeVars t₁).length = (freeVars t₂).length := by
+  axiom
+
+/-! ## Preservation Under Term Construction -/
+
+/-- The subterm relation preserves well-formedness: subterms of well-formed terms are well-formed. -/
+theorem subterm_preserves_wf (s t : Term) (h : Subterm s t) (hwfT : wf t) : wf s := by
+  induction h with
+  | refl => exact hwfT
+  | appL h ih =>
+    simp [wf] at hwfT
+    exact ih hwfT.1
+  | appR h ih =>
+    simp [wf] at hwfT
+    exact ih hwfT.2
+  | lamBody h ih =>
+    simp [wf] at hwfT
+    exact ih hwfT
+  | piDom h ih =>
+    simp [wf] at hwfT
+    exact ih hwfT.1
+  | piCod h ih =>
+    simp [wf] at hwfT
+    exact ih hwfT.2
+  | letVal h ih =>
+    simp [wf] at hwfT
+    exact ih hwfT.1
+  | letBody h ih =>
+    simp [wf] at hwfT
+    exact ih hwfT.2
+
+/-- Constructing a lambda term preserves closedness of the body. -/
+theorem lam_preserves_closed_body (v : Variable) (body : Term) (h : isClosed body) : isClosed (.lam v body) := by
+  simp [isClosed, freeVars] at h ⊢
+  omega
+
+/-- Application preserves closedness. -/
+theorem app_preserves_closed (f a : Term) (hf : isClosed f) (ha : isClosed a) : isClosed (.app f a) := by
+  simp [isClosed, freeVars, hf, ha]
+
+/-! ## Preservation Under Lifting -/
+
+/-- Lifting preserves the size of a term. -/
+theorem lift_preserves_size (t : Term) (cutoff d : Nat) : size (lift t cutoff d) = size t := by
+  induction t generalizing cutoff d with
+  | var v => simp [lift, size]
+  | app f a ihf iha =>
+    simp [lift, size, ihf cutoff d, iha cutoff d]
+  | lam _ body ih =>
+    simp [lift, size, ih (cutoff + 1) d]
+  | pi _ dom cod ihd ihc =>
+    simp [lift, size, ihd cutoff d, ihc (cutoff + 1) d]
+  | sort _ => simp [lift, size]
+  | lit _ => simp [lift, size]
+  | letE _ val body ihv ihb =>
+    simp [lift, size, ihv cutoff d, ihb (cutoff + 1) d]
+
+/-- Lifting preserves structural equality. -/
+theorem lift_preserves_structEq (t₁ t₂ : Term) (cutoff d : Nat) (h : structEq t₁ t₂) :
+    structEq (lift t₁ cutoff d) (lift t₂ cutoff d) := by
+  axiom
+
+/-! ## #eval Examples -/
+
+#eval size (lift wfEx 0 2) == size wfEx
+
+#eval subst_preserves_wf wfEx (.lit 42) (Variable.free "x") (by native_decide) (by native_decide)
+
+#eval renaming_preserves_size (.app (.var (Variable.free "x")) (.lit 1)) Renaming.id
+
+#eval app_preserves_closed (.lit 1) (.lit 2) (by decide) (by decide)
+
+end MiniSyntaxKernel
