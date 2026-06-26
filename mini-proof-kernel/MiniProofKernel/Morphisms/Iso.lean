@@ -107,9 +107,9 @@ def deMorganOrIntro (A B : Formula) : ProofTree []
 /-- De Morgan: ¬(¬A ∧ ¬B) → (A ∨ B) (classical, uses LEM). -/
 def deMorganAndElim (A B : Formula) : ProofTree []
     (.impl (.not (.and (.not A) (.not B))) (.or A B)) :=
-  .implI (.orE (.lem (a:=A))
+  .implI (.orE (.lem (A:=A))
     (.orIl (.hyp (.head _)))
-    (.orE (.lem (a:=B))
+    (.orE (.lem (A:=B))
       (.orIr (.hyp (.head _)))
       (.falseE (.notE (.hyp (.tail _ (.tail _ (.head _))))
         (.andI (.hyp (.tail _ (.head _))) (.hyp (.head _)))))))

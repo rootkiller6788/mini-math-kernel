@@ -130,7 +130,7 @@ theorem structEq_go_symm (t₁ t₂ : Term) (d : Nat) (h : structEq.go t₁ t₂
         | isTrue h_eq => exact h_eq
         | isFalse h_ne => rw [hdec] at h; simp at h
       subst heq
-      native_decide
+      simpa using rfl
     | app _ _ => dsimp [structEq.go] at h; simp at h
     | lam _ _ => dsimp [structEq.go] at h; simp at h
     | pi _ _ _ => dsimp [structEq.go] at h; simp at h
@@ -172,7 +172,7 @@ theorem structEq_go_symm (t₁ t₂ : Term) (d : Nat) (h : structEq.go t₁ t₂
         | isTrue h_eq => exact h_eq
         | isFalse h_ne => rw [hdec] at h; simp at h
       subst heq
-      native_decide
+      simpa using rfl
     | _ => dsimp [structEq.go] at h; simp at h
   | lit n1 =>
     cases t₂ with
@@ -183,7 +183,7 @@ theorem structEq_go_symm (t₁ t₂ : Term) (d : Nat) (h : structEq.go t₁ t₂
         | isTrue h_eq => exact h_eq
         | isFalse h_ne => rw [hdec] at h; simp at h
       subst heq
-      native_decide
+      simpa using rfl
     | _ => dsimp [structEq.go] at h; simp at h
   | letE v1 t1 b1 ihv ihb =>
     cases t₂ with

@@ -6,7 +6,6 @@ cycle detection, transitive closure, build order, impact analysis.
 -/
 
 import MiniTheoryDependencyKernel.Core.Basic
-import MiniTheoryDependencyKernel.Core.Laws
 import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel

@@ -39,7 +39,7 @@ def cDNLEM : ProofTree [] (.not (.not (.or cA (.not cA)))) :=
 
 -- ¬¬A → A (classical)
 def cDNE : ProofTree [] (.impl (.not (.not cA)) cA) :=
-  .implI (.orE (.lem (a:=cA))
+  .implI (.orE (.lem (A:=cA))
     (.hyp (.head _))
     (.falseE (.notE (.hyp (.tail _ (.head _))) (.hyp (.head _)))))
 
@@ -47,7 +47,7 @@ def cDNE : ProofTree [] (.impl (.not (.not cA)) cA) :=
 
 -- ((A → B) → A) → A (classical)
 def cPierce : ProofTree [] (.impl (.impl (.impl cA cB) cA) cA) :=
-  .implI (.orE (.lem (a:=cA))
+  .implI (.orE (.lem (A:=cA))
     (.hyp (.head _))
     (.falseE (.notE
       (.implI (.falseE (.implE (.hyp (.tail _ (.tail _ (.head _))))
@@ -58,8 +58,8 @@ def cPierce : ProofTree [] (.impl (.impl (.impl cA cB) cA) cA) :=
 
 -- ¬(A ∧ B) → (¬A ∨ ¬B) (classical direction)
 def cDeMorganAnd : ProofTree [] (.impl (.not (.and cA cB)) (.or (.not cA) (.not cB))) :=
-  .implI (.orE (.lem (a:=cA))
-    (.orE (.lem (a:=cB))
+  .implI (.orE (.lem (A:=cA))
+    (.orE (.lem (A:=cB))
       (.falseE (.notE (.hyp (.tail _ (.head _)))
         (.andI (.hyp (.head _)) (.hyp (.head _)))))
       (.orIr (.notI (.hyp (.head _)))))
@@ -73,9 +73,9 @@ def cDeMorganOr : ProofTree [] (.impl (.or (.not cA) (.not cB)) (.not (.and cA c
 
 -- ¬(¬A ∧ ¬B) → (A ∨ B) (classical)
 def cDeMorganAndElim : ProofTree [] (.impl (.not (.and (.not cA) (.not cB))) (.or cA cB)) :=
-  .implI (.orE (.lem (a:=cA))
+  .implI (.orE (.lem (A:=cA))
     (.orIl (.hyp (.head _)))
-    (.orE (.lem (a:=cB))
+    (.orE (.lem (A:=cB))
       (.orIr (.hyp (.head _)))
       (.falseE (.notE (.hyp (.tail _ (.tail _ (.head _))))
         (.andI (.hyp (.tail _ (.head _))) (.hyp (.head _)))))))
@@ -84,7 +84,7 @@ def cDeMorganAndElim : ProofTree [] (.impl (.not (.and (.not cA) (.not cB))) (.o
 
 -- (¬A → ⊥) → A (classical proof by contradiction)
 def cByContradiction : ProofTree [] (.impl (.impl (.not cA) .false) cA) :=
-  .implI (.orE (.lem (a:=cA))
+  .implI (.orE (.lem (A:=cA))
     (.hyp (.head _))
     (.falseE (.implE (.hyp (.tail _ (.head _))) (.hyp (.head _)))))
 
@@ -97,7 +97,7 @@ def cExplosion : ProofTree [] (.impl cA (.impl (.not cA) cB)) :=
 -- (A → B) ↔ (¬A ∨ B) (classical equivalence)
 def cImplAsOr : ProofTree [] (.equiv (.impl cA cB) (.or (.not cA) cB)) :=
   .equivI
-    (.implI (.orE (.lem (a:=cA))
+    (.implI (.orE (.lem (A:=cA))
       (.orIr (.implE (.hyp (.tail _ (.head _))) (.hyp (.head _))))
       (.orIl (.notI (.hyp (.head _))))))
     (.implI (.orE (.hyp (.head _))

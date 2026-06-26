@@ -47,11 +47,11 @@ def introNot {Γ : Context} {A : Formula}
 
 def byContradiction {Γ : Context} {A : Formula}
     (f : ProofTree ((.not A) :: Γ) (.not A) → ProofTree ((.not A) :: Γ) .false) : ProofTree Γ A :=
-  .orE (.lem (a:=A)) (.hyp (.head _)) (.falseE (f (.hyp (.head _))))
+  .orE (.lem (A:=A)) (.hyp (.head _)) (.falseE (f (.hyp (.head _))))
 
 def doubleNegElim {Γ : Context} {A : Formula}
     (p : ProofTree Γ (.not (.not A))) : ProofTree Γ A :=
-  .orE (.lem (a:=A)) (.hyp (.head _)) (.falseE (.notE (p.weakenCons) (.hyp (.head _))))
+  .orE (.lem (A:=A)) (.hyp (.head _)) (.falseE (.notE (p.weakenCons) (.hyp (.head _))))
 
 /-! ## Proof Equivalence Relations -/
 

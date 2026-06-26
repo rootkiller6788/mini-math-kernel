@@ -206,8 +206,8 @@ def useLEM (A : Formula) : Tactic
   | ⟨ctx, goal⟩ =>
     .subgoals [⟨A :: ctx, goal⟩, ⟨.not A :: ctx, goal⟩] (fun proofs =>
       match proofs with
-      | [p, q] => .orE (.lem (a:=A)) p q
-      | _ => .orE (.lem (a:=A)) (proofs.head?) (proofs.head?))
+      | [p, q] => .orE (.lem (A:=A)) p q
+      | _ => .orE (.lem (A:=A)) (proofs.head?) (proofs.head?))
 
 /-! ## Proof Automation -/
 

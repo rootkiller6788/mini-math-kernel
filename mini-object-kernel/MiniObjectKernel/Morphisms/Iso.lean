@@ -16,6 +16,7 @@ Knowledge coverage:
 -/
 
 import MiniObjectKernel.Core.Basic
+import MiniObjectKernel.Core.Objects
 
 namespace MiniObjectKernel
 

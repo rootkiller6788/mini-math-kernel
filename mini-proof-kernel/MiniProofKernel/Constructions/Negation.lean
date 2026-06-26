@@ -99,9 +99,9 @@ def deMorganAndL {Γ : Context} {A B : Formula}
 ¬(¬A ∧ ¬B) → (A ∨ B). -/
 def deMorganAndRClassical {Γ : Context} {A B : Formula}
     : ProofTree Γ (.impl (.not (.and (.not A) (.not B))) (.or A B)) :=
-  .implI (.orE (.lem (a:=A))
+  .implI (.orE (.lem (A:=A))
     (.orIl (.hyp (.head _)))
-    (.orE (.lem (a:=B))
+    (.orE (.lem (A:=B))
       (.orIr (.hyp (.head _)))
       (.falseE (.notE (.hyp (.tail _ (.tail _ (.head _))))
         (.andI (.hyp (.tail _ (.head _))) (.hyp (.head _)))))))
@@ -124,6 +124,7 @@ def negEFQ : ProofTree [] (.impl .false negA) := .implI (.falseE (.hyp (.head _)
 #eval negNCProof.isValid
 #eval negDNIntro.size
 #eval negEFQ.size
-#eval nonContradiction.size
-#eval tripleNegReduction.size
+#eval (nonContradiction (Γ:=[]) (A:=negA)).size
+#eval (tripleNegReduction (Γ:=[]) (A:=negA)).size
 
+end MiniProofKernel
