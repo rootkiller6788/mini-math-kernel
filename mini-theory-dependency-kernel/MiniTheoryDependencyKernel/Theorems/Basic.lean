@@ -14,6 +14,8 @@ import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Theorem: Topological Order Existence (Tautology)
 
 `isAcyclic` is defined as the existence of a topological order.
@@ -315,13 +317,13 @@ The formal proof proceeds by:
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let g : DependencyGraph :=
     { nodes := [ TheoryNode.simple (TheoryName.ofString "Base") "" "" "" ]
     , edges := [] }
   (g.isAcyclic, g.topologicalOrder.isSome, g.isValid, g.findCycle == none)
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let g : DependencyGraph :=
@@ -330,7 +332,7 @@ The formal proof proceeds by:
     , edges := [] }
   (g.hasPath a b, g.hasPath b a, g.nodeCount, g.edgeCount)
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let g : DependencyGraph :=
@@ -339,7 +341,7 @@ The formal proof proceeds by:
     , edges := [{ source := b, target := a, kind := .import, description := none }] }
   (g.edgeCount, g.nodeCount, g.isAcyclic, g.inDegree a, g.outDegree a, g.inDegree b, g.outDegree b)
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let c := TheoryName.ofString "C"
@@ -353,7 +355,7 @@ The formal proof proceeds by:
   (empty_graph_is_valid, singleton_graph_valid (TheoryNode.simple a "" "" ""),
    g.condensation.isAcyclic)
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let g : DependencyGraph :=

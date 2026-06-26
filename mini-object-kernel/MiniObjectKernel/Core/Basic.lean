@@ -76,7 +76,9 @@ An `Object` is any type with an associated theory, name, and
 human-readable representation. This is the foundational typeclass
 for all mathematical structures in the ecosystem. -/
 
-class Object (α : Type) where
+universe u
+
+class Object (α : Type u) where
   theory : TheoryName
   objName : String
   repr : α → String
@@ -84,19 +86,19 @@ class Object (α : Type) where
 export Object (theory objName repr)
 
 /-- Produce a description string for a type with an Object instance. -/
-def describe (α : Type) [Object α] : String :=
+def describe (α : Type u) [Object α] : String :=
   s!"[{theory α}] {objName α}"
 
 /-- Get the fully qualified name of an object. -/
-def Object.qualifiedName (α : Type) [Object α] : String :=
+def Object.qualifiedName (α : Type u) [Object α] : String :=
   s!"{theory α}.{objName α}"
 
 /-- An object is "primitive" if it belongs to a root-level theory. -/
-def Object.isPrimitive (α : Type) [Object α] : Bool :=
+def Object.isPrimitive (α : Type u) [Object α] : Bool :=
   (theory α).depth == 0
 
 /-- An object is "derived" if it belongs to a multi-segment theory. -/
-def Object.isDerived (α : Type) [Object α] : Bool :=
+def Object.isDerived (α : Type u) [Object α] : Bool :=
   (theory α).depth > 1
 
 /-! ## Canonical Object Instances — L6: Standard Examples -/

@@ -1,4 +1,4 @@
-﻿/-
+/-
 # Dependency Kernel: Bridge to Computation
 
 Computational dependency structures from build systems theory:
@@ -14,6 +14,8 @@ import MiniTheoryDependencyKernel.Properties.Invariants
 import MiniTheoryDependencyKernel.Theorems.Main
 
 namespace MiniTheoryDependencyKernel
+
+open MiniObjectKernel
 
 /-! ## Build System Model
 
@@ -287,7 +289,7 @@ where
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let a := TheoryName.ofString "Source"
   let b := TheoryName.ofString "Object"
   let c := TheoryName.ofString "Binary"
@@ -301,7 +303,7 @@ where
   (simulateBuild g, isValidMakeDependency g, estimateBuildTime g,
    estimateBuildTimeLimited g 2, resolveDependencies g c)
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let c := TheoryName.ofString "C"
@@ -315,7 +317,7 @@ where
   (g.parallelism, g.criticalPath, g.totalWork, g.parallelSpeedup,
    cacheHitRate g, phonyTargets g, defaultTarget g)
 
-#eval do
+#eval
   let a := TheoryName.ofString "Kernel"
   let b := TheoryName.ofString "Lib"
   let c := TheoryName.ofString "App"
@@ -328,7 +330,7 @@ where
     }
   (rebuildCost g a, ninjaSimulate g a, bottleneckTargets g, totalRebuildCost g)
 
-#eval do
+#eval
   let a := TheoryName.ofString "Base"
   let b := TheoryName.ofString "Left"
   let c := TheoryName.ofString "Right"

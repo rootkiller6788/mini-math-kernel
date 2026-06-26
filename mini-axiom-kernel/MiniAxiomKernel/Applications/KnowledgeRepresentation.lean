@@ -206,7 +206,7 @@ def hornRuleAxiom (name : String) (body : List Formula) (head : Formula) : Axiom
     new facts until saturation. Simplified: one-step forward chaining. -/
 def forwardChain (kb : KnowledgeBase) (rules : List Axiom) : List Formula :=
   let allAxioms := kb.toSystem.axioms.axioms
-  let knownFacts := allAxioms.map (x => ax.statement)
+  let knownFacts := allAxioms.map (fun ax => ax.statement)
   let newFacts := rules.filterMap fun rule =>
     match rule.statement with
     | .impl body head =>

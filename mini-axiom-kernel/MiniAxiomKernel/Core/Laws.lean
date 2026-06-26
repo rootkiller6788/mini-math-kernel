@@ -81,6 +81,33 @@ where
       if othersOk && targetFalse then true
       else searchModel atoms (k + 1) (remaining - 1) others target
 
+/-! ## Fundamental Lemmas about addAxiom -/
+
+/-- Membership in the axiom list after `addAxiom`: an axiom is in
+    `sys.addAxiom ax` iff it was already in `sys` or equals `ax`. -/
+lemma mem_addAxiom_iff (sys : AxiomSystem) (ax ax' : Axiom) :
+    ax' ∈ (sys.addAxiom ax).axioms.axioms ↔ ax' ∈ sys.axioms.axioms ∨ ax' = ax := by
+  simp [AxiomSystem.addAxiom, AxiomSet.add]
+
+/-- `isModel` for a system with one added axiom decomposes
+    into `isModel` of the original system plus the new axiom being true. -/
+lemma isModel_addAxiom_iff (sys : AxiomSystem) (ax : Axiom) (assign : Nat → Bool) :
+    isModel assign (sys.addAxiom ax) ↔
+    isModel assign sys ∧ ax.statement.eval assign = true := by
+  constructor
+  · intro h
+    have hModel : isModel assign sys := by
+      intro ax' hax'
+      exact h ax' (by simp [AxiomSystem.addAxiom, AxiomSet.add, hax'])
+    have hAx : ax.statement.eval assign = true :=
+      h ax (by simp [AxiomSystem.addAxiom, AxiomSet.add])
+    exact ⟨hModel, hAx⟩
+  · intro ⟨hModel, hAx⟩ ax' hax'
+    simp [AxiomSystem.addAxiom, AxiomSet.add] at hax'
+    rcases hax' with (h | h)
+    · exact hModel ax' h
+    · subst h; exact hAx
+
 structure AxiomRegistry where
   systems : List AxiomSystem
   deriving Repr, Inhabited

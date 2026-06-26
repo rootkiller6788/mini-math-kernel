@@ -11,6 +11,8 @@ import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Consistency Strength Classification
 
 Theories are classified by their consistency strength: how much
@@ -190,7 +192,7 @@ def Taxonomy.findClass (tax : Taxonomy) (name : TheoryName) : Option String :=
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let a := TheoryName.ofString "Fundamental"
   let b := TheoryName.ofString "Derived"
   let g : DependencyGraph :=
@@ -200,12 +202,12 @@ def Taxonomy.findClass (tax : Taxonomy) (name : TheoryName) : Option String :=
     }
   (mostFundamental g, mostDerived g)
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "PA")
             |>.addAxiom { name := "ind", statement := "induction" }
   (AxiomatizabilityClass.ofTheory t, ConsistencyClass.fromRank 3)
 
-#eval do
+#eval
   let profiles := classifyByProfile DependencyGraph.empty
   let dc := DependencyProfile.compare
     { name := TheoryName.ofString "A", directDeps := 0, transitiveDeps := 0, directDependents := 1, depth := 1 }

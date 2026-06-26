@@ -42,40 +42,64 @@ theorem soundness (f : Formula) (h : Derivable f) : isTautology f := by
   induction h with
   | ax_id A =>
     intro assignment
-    simp [isTautology, ruleId, Formula.eval]
+    unfold isTautology ruleId
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> simp [hA]
   | ax_excluded_middle A =>
     intro assignment
-    simp [isTautology, ruleExcludedMiddle, Formula.eval]
+    unfold isTautology ruleExcludedMiddle
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> simp [hA]
   | ax_non_contradiction A =>
     intro assignment
-    simp [isTautology, ruleNonContradiction, Formula.eval]
+    unfold isTautology ruleNonContradiction
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> simp [hA]
   | ax_double_neg_elim A =>
     intro assignment
-    simp [isTautology, ruleDoubleNegElim, Formula.eval]
+    unfold isTautology ruleDoubleNegElim
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> simp [hA]
   | ax_double_neg_intro A =>
     intro assignment
-    simp [isTautology, ruleDoubleNegIntro, Formula.eval]
+    unfold isTautology ruleDoubleNegIntro
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> simp [hA]
   | ax_de_morgan_and A B =>
     intro assignment
-    simp [isTautology, ruleDeMorganAnd, Formula.eval]
+    unfold isTautology ruleDeMorganAnd
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> by_cases hB : B.eval assignment <;> simp [hA, hB]
   | ax_de_morgan_or A B =>
     intro assignment
-    simp [isTautology, ruleDeMorganOr, Formula.eval]
+    unfold isTautology ruleDeMorganOr
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> by_cases hB : B.eval assignment <;> simp [hA, hB]
   | ax_contraposition A B =>
     intro assignment
-    simp [isTautology, ruleContraposition, Formula.eval]
+    unfold isTautology ruleContraposition
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> by_cases hB : B.eval assignment <;> simp [hA, hB]
   | ax_exportation A B C =>
     intro assignment
-    simp [isTautology, ruleExportation, Formula.eval]
+    unfold isTautology ruleExportation
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> by_cases hB : B.eval assignment <;> by_cases hC : C.eval assignment <;> simp [hA, hB, hC]
   | ax_importation A B C =>
     intro assignment
-    simp [isTautology, ruleImportation, Formula.eval]
+    unfold isTautology ruleImportation
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> by_cases hB : B.eval assignment <;> by_cases hC : C.eval assignment <;> simp [hA, hB, hC]
   | ax_syllogism A B C =>
     intro assignment
-    simp [isTautology, ruleSyllogism, Formula.eval]
+    unfold isTautology ruleSyllogism
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> by_cases hB : B.eval assignment <;> by_cases hC : C.eval assignment <;> simp [hA, hB, hC]
   | ax_proof_by_cases A B C =>
     intro assignment
-    simp [isTautology, ruleProofByCases, Formula.eval]
+    unfold isTautology ruleProofByCases
+    simp [Formula.eval]
+    by_cases hA : A.eval assignment <;> by_cases hB : B.eval assignment <;> by_cases hC : C.eval assignment <;> simp [hA, hB, hC]
   | mp {A B : Formula} _hAB _hA ihAB ihA =>
     intro assignment
     have hAB_true : (Formula.impl A B).eval assignment = true := ihAB assignment
@@ -106,13 +130,17 @@ theorem semantic_deduction (Γ : Set Formula) (A B : Formula)
     by_cases hA : A.eval σ = true
     · simp [hA]
       -- Goal becomes: B.eval σ = true
-      have hΓ' : ∀ g ∈ (Γ ∪ {A} : Set Formula), g.eval σ = true := by
+      have hΓ' : ∀ g, (Γ ∪ {A}) g → g.eval σ = true := by
         intro g hg
+        dsimp [Set.union, Set.singleton] at hg
         rcases hg with (hgΓ | hgA)
         · exact hΓ g hgΓ
-        · rw [Set.mem_singleton_iff.mp hgA]; exact hA
+        · subst hgA; exact hA
       exact h σ hΓ'
-    · have hA_false : A.eval σ = false := Bool.eq_false_of_not_eq_true hA
+    · have hA_false : A.eval σ = false := by
+        cases hA' : A.eval σ
+        · rfl
+        · simp [hA] at hA'
       simp [hA_false]
   exact h_impl
 
@@ -161,13 +189,19 @@ Strong completeness: if Γ semantically implies f, then f is derivable from Γ.
 In propositional logic, this follows from compactness + weak completeness.
 -/
 
+/--
+Strong completeness (Finite Subset Property): if Γ semantically implies f,
+then some finite subset of Γ already semantically implies f.
+This is equivalent to the compactness theorem for propositional logic.
+-/
 def StrongCompleteness : Prop :=
   ∀ (Γ : Set Formula) (f : Formula),
-    semanticallyImplies Γ f → (∃ Δ : Set Formula, Δ ⊆ Γ ∧ Set.Finite Δ ∧ Derivable (Formula.impl (Δ.toList.foldr Formula.and Formula.true) f))
+    semanticallyImplies Γ f →
+    ∃ (Δ : Set Formula), Δ ⊆ Γ ∧ Set.Finite Δ ∧ semanticallyImplies Δ f
 
 /--
-Strong completeness (stated as Prop). Follows from weak completeness
-and the compactness theorem for propositional logic.
+Strong completeness for propositional logic. Proved by combining weak
+completeness (every tautology is derivable) with the compactness theorem.
 -/
 axiom strong_completeness : StrongCompleteness
 

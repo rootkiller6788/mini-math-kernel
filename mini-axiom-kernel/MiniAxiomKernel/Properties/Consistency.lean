@@ -3,6 +3,9 @@
 
 Defines and analyzes consistency strength, relative consistency,
 and equiconsistency of axiom systems.
+
+Provides proper Prop-level lemmas (§ Consistency Theorems) and
+computational checks (§ Consistency Classification, § Relative Consistency).
 -/
 
 import MiniAxiomKernel.Core.Basic
@@ -11,7 +14,87 @@ import MiniAxiomKernel.Constructions.Quotients
 
 namespace MiniAxiomKernel
 
-/-! ## Consistency Classification -/
+/-! ## Consistency Theorems (Prop-level)
+
+Fundamental properties of consistency and inconsistency
+in propositional axiom systems.
+-/
+
+/-- **Inconsistency characterizes trivial entailment**:
+    A system is inconsistent iff every formula is a logical consequence. -/
+lemma inconsistent_iff_all_consequences (sys : AxiomSystem) :
+    isInconsistent sys ↔ ∀ (f : Formula) (assign : Nat → Bool),
+      isModel assign sys → f.eval assign = true := by
+  constructor
+  · intro hIncons f assign hModel
+    exfalso; exact hIncons ⟨assign, hModel⟩
+  · intro hAll
+    intro hCons
+    -- Take f = Formula.false (⊥); if ⊥ is true in all models,
+    -- then there cannot be any models (since ⊥ is never true)
+    have hBot := hAll .false
+    -- This gives ∀ assign, isModel assign sys → false = true, which is impossible
+    -- So the only way is that there are no assignments satisfying the premise
+    rcases hCons with ⟨assign, hModel⟩
+    have := hBot assign hModel
+    simp [Formula.eval] at this
+
+/-- **Equiconsistency is an equivalence relation** (reflexive). -/
+lemma equiconsistent_refl (sys : AxiomSystem) : areEquiconsistent sys sys := by
+  unfold areEquiconsistent
+  simp [checkConsistencyLE, checkConsistent]
+
+/-- **Equiconsistency is symmetric** (by definition). -/
+lemma equiconsistent_symm (sysA sysB : AxiomSystem) (h : areEquiconsistent sysA sysB) :
+    areEquiconsistent sysB sysA := by
+  unfold areEquiconsistent at h ⊢
+  rcases h with ⟨hAB, hBA⟩
+  exact ⟨hBA, hAB⟩
+
+/-- **Consistency strength ordering is reflexive (Prop-level)**:
+    Every system has at most the consistency strength of itself. -/
+lemma consistencyLE_refl (sys : AxiomSystem) : HasConsistencyLE sys sys :=
+  { relativeConsistency := fun h => h }
+
+/-- **Consistency strength is transitive**:
+    If A ≤ B and B ≤ C in consistency strength, then A ≤ C. -/
+lemma consistencyLE_trans (sysA sysB sysC : AxiomSystem)
+    (hAB : HasConsistencyLE sysA sysB) (hBC : HasConsistencyLE sysB sysC) :
+    HasConsistencyLE sysA sysC :=
+  { relativeConsistency := fun h =>
+      hAB.relativeConsistency (hBC.relativeConsistency h) }
+
+/-- **Lemma: Adding a true axiom to a consistent system preserves consistency.**
+    If ax.statement is true in some model of sys, then sys ∪ {ax} is consistent. -/
+lemma consistent_add_true_axiom (sys : AxiomSystem) (ax : Axiom) (assign : Nat → Bool)
+    (hModel : isModel assign sys) (hAx : ax.statement.eval assign = true) :
+    isConsistent (sys.addAxiom ax) := by
+  refine ⟨assign, ?_⟩
+  intro ax' hax'
+  -- hax' : ax' ∈ (sys.addAxiom ax).axioms.axioms
+  have hmem := (mem_addAxiom_iff sys ax ax').mp hax'
+  rcases hmem with (h | h)
+  · exact hModel ax' h
+  · subst h; exact hAx
+
+/-- **Lemma: An axiom system with contradictory axioms is inconsistent.**
+    If a system contains both f and ¬f as axioms, it has no models. -/
+lemma contradictory_axioms_inconsistent (sys : AxiomSystem) (f : Formula)
+    (hF : (Axiom.simple "F" f) ∈ sys.axioms.axioms)
+    (hNotF : (Axiom.simple "¬F" (.not f)) ∈ sys.axioms.axioms) :
+    isInconsistent sys := by
+  intro hCons
+  rcases hCons with ⟨assign, hModel⟩
+  have hFtrue := hModel (Axiom.simple "F" f) hF
+  have hNotFtrue := hModel (Axiom.simple "¬F" (.not f)) hNotF
+  simp [Formula.eval] at hFtrue hNotFtrue
+  -- Now hFtrue : f.eval assign = true, hNotFtrue : ¬(f.eval assign) = true
+  rw [hFtrue] at hNotFtrue; simp at hNotFtrue
+
+/-! ## Consistency Classification
+
+The following provides computational (Bool) classification of
+consistency via finite model search. -/
 
 /-- A consistency classification for an axiom system. -/
 inductive ConsistencyClass

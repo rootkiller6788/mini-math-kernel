@@ -1,10 +1,17 @@
 /-
 # Axioms Kernel: Compactness Theorems
 
-Proves compactness properties of axiom systems. The compactness theorem
-states: if every finite subset of a set of formulas has a model, then
-the whole set has a model. In propositional logic, this is equivalent to
-the topological compactness of the space of truth assignments.
+The compactness theorem for propositional logic states:
+  If every finite subset of a set of formulas is satisfiable,
+  then the entire set is satisfiable.
+
+This is a fundamental result in mathematical logic (equivalent to
+the topological compactness of the Stone space of truth assignments).
+For finite axiom systems, the statement is trivially true. For infinite
+sets, it is a deep theorem (equivalent to the Boolean Prime Ideal Theorem).
+
+We provide both Prop-level statements (§ Compactness Theorem) and
+finite-model computational checks (§ Computational Checks).
 -/
 
 import MiniAxiomKernel.Core.Basic
@@ -15,7 +22,96 @@ import MiniAxiomKernel.Properties.Consistency
 
 namespace MiniAxiomKernel
 
-/-! ## Finite Subset Check -/
+/-! ## Compactness Theorem (Prop-level)
+
+The compactness theorem relates finite satisfiability to global
+satisfiability. In propositional logic over a finite vocabulary,
+this is a trivial truth. For infinite vocabularies, it requires
+Kőnig's lemma or Tychonoff's theorem.
+
+We state and prove the finite-vocabulary version.
+-/
+
+/-- **Compactness (finite system version)**:
+    For a finite axiom system, the system is satisfiable (consistent)
+    if and only if every finite subset of its axioms is satisfiable.
+
+    Since the system itself is finite, this is trivially true:
+    the whole system is itself a finite subset. -/
+theorem compactness_finite_system (sys : AxiomSystem) :
+    isConsistent sys ↔
+    (∀ (subset : List Axiom),
+       (∀ ax ∈ subset, ax ∈ sys.axioms.axioms) →
+       isConsistent (AxiomSystem.empty "sub" "1.0" |>.addAxioms subset)) := by
+  constructor
+  · intro hCons subset hSub
+    -- If sys is consistent, any subset is consistent (by subtheory property)
+    rcases hCons with ⟨assign, hModel⟩
+    refine ⟨assign, ?_⟩
+    intro ax hax
+    -- ax is in the subset system
+    simp [AxiomSystem.empty, AxiomSystem.addAxioms, AxiomSet.addAll, AxiomSet.empty] at hax
+    -- hax: ax ∈ subset
+    exact hModel ax (hSub ax hax)
+  · intro hAllSubsets
+    -- Take the whole axiom list as the "subset"
+    apply hAllSubsets sys.axioms.axioms
+    · intro ax hax; exact hax
+
+/-- **Lemma: The empty set of formulas is always satisfiable.**
+    This is the base case of the compactness theorem. -/
+lemma empty_set_satisfiable : isConsistent (AxiomSystem.empty "E" "1.0") := by
+  refine ⟨fun _ => true, ?_⟩
+  intro ax h; simp [AxiomSystem.empty, AxiomSet.empty] at h
+
+/-- **Lemma: Adding an axiom to a satisfiable set preserves satisfiability**
+    **iff the axiom is true in some model of the set.** -/
+lemma satisfiable_add_iff (sys : AxiomSystem) (ax : Axiom) :
+    isConsistent (sys.addAxiom ax) ↔
+    ∃ (assign : Nat → Bool), isModel assign sys ∧ ax.statement.eval assign = true := by
+  constructor
+  · intro hCons
+    rcases hCons with ⟨assign, hModel⟩
+    refine ⟨assign, ?_, ?_⟩
+    · intro ax' hax'
+      apply hModel ax'
+      simp [AxiomSystem.addAxiom, AxiomSet.add, hax']
+    · apply hModel ax
+      simp [AxiomSystem.addAxiom, AxiomSet.add]
+  · intro ⟨assign, hModel, hAx⟩
+    refine ⟨assign, ?_⟩
+    intro ax' hax'
+    simp [AxiomSystem.addAxiom, AxiomSet.add] at hax'
+    rcases hax' with (h | h)
+    · exact hModel ax' h
+    · subst h; exact hAx
+
+/-- **Finite Satisfiability Property**:
+    A system is finitely satisfiable if every finite subset has a model.
+    For a finite axiom system, finite satisfiability is equivalent to
+    satisfiability (consistency). -/
+def isFinitelySatisfiableProp (sys : AxiomSystem) : Prop :=
+  ∀ (subset : List Axiom),
+    (∀ ax ∈ subset, ax ∈ sys.axioms.axioms) →
+    ∃ (assign : Nat → Bool),
+      ∀ ax ∈ subset, ax.statement.eval assign = true
+
+/-- **Compactness for finite systems**: finite satisfiability
+    implies satisfiability for any system with finitely many axioms. -/
+theorem compactness_finite_satisfiability (sys : AxiomSystem)
+    (hFinSat : isFinitelySatisfiableProp sys) : isConsistent sys := by
+  -- Take the whole set of axioms as the finite subset
+  -- (since there are finitely many axioms)
+  have hSat := hFinSat sys.axioms.axioms (fun _ hax => hax)
+  rcases hSat with ⟨assign, hAll⟩
+  refine ⟨assign, ?_⟩
+  intro ax hax
+  exact hAll ax hax
+
+/-! ## Finite Subset Check
+
+The following provides computational (#eval) checks for the
+compactness property on small finite systems. -/
 
 /-- Generate all finite subsets of axioms up to a given size. -/
 def finiteSubsets (sys : AxiomSystem) (maxSize : Nat) : List AxiomSet :=

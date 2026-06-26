@@ -121,7 +121,7 @@ def compactnessStatement : Prop :=
 
 /-!
 Proof sketch for compactness:
-1. Each formula f defines a basic clopen set V(f) = {σ | f.eval σ = true}
+1. Each formula f defines a basic clopen set V(f) = (λ σ => f.eval σ = true)
    in the product topology on {0,1}^Nat.
 2. The hypothesis says every finite intersection of V(f) for f∈Γ is nonempty
    (by satisfiability of finite subsets).

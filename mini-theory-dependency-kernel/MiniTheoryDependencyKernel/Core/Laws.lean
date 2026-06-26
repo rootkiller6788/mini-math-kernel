@@ -11,6 +11,8 @@ import MiniTheoryDependencyKernel.Core.Objects
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Acyclicity Laws
 
 A valid theory dependency graph must be acyclic: no theory should
@@ -19,6 +21,10 @@ depend on itself (directly or transitively).
 
 def DependencyGraph.isAcyclic (g : DependencyGraph) : Bool :=
   g.topologicalOrder.isSome
+
+/-- Check if the graph is a DAG (directed acyclic graph). -/
+def DependencyGraph.isDAG (g : DependencyGraph) : Bool :=
+  g.isAcyclic
 
 def DependencyGraph.hasDirectCycle (g : DependencyGraph) : Bool :=
   g.edges.any (fun e => e.source == e.target)
@@ -132,7 +138,7 @@ def DependencyGraph.isValid (g : DependencyGraph) : Bool :=
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let sig : Signature := { constants := [""], functions := [("+", 2)], relations := [] }
   let mono : FormalTheory := FormalTheory.simple (TheoryName.ofString "Monoid")
             |>.addAxiom { name := "assoc", statement := "assoc" }
@@ -144,7 +150,7 @@ def DependencyGraph.isValid (g : DependencyGraph) : Bool :=
       newAxioms := [{ name := "inverse", statement := "inv" }] }
   ConservativityReport.check ext
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let c := TheoryName.ofString "C"
@@ -152,7 +158,7 @@ def DependencyGraph.isValid (g : DependencyGraph) : Bool :=
   let e2 : DependencyEdge := { source := b, target := c, kind := .import, description := none }
   composeEdges e1 e2
 
-#eval do
+#eval
   let n := TheoryNode.simple (TheoryName.ofString "SelfLoop") "" "" ""
   let e : DependencyEdge := { source := n.name, target := n.name, kind := .import, description := none }
   let g := { nodes := [n], edges := [e] : DependencyGraph }

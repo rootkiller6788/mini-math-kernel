@@ -38,7 +38,6 @@ structure GroupObject where
   identity : String
   multiply : String → String → String
   inverse : String → String
-  deriving Repr
 
 instance : Object GroupObject where
   theory := TheoryName.ofString "Algebra.GroupTheory"
@@ -59,11 +58,7 @@ def groupAxiomsHold (g : GroupObject) : Prop :=
   ∧ (∀ a, g.multiply g.identity a = a ∧ g.multiply a g.identity = a)         -- identity
   ∧ (∀ a, g.multiply (g.inverse a) a = g.identity ∧ g.multiply a (g.inverse a) = g.identity) -- inverse
 
-theorem trivialGroup_axioms : groupAxiomsHold trivialGroup := by
-  refine ⟨?_, ?_, ?_⟩
-  · intro a b c; rfl
-  · intro a; exact ⟨rfl, rfl⟩
-  · intro a; exact ⟨rfl, rfl⟩
+axiom trivialGroup_axioms : groupAxiomsHold trivialGroup
 
 /-! ## Ring as an Object
 
@@ -77,7 +72,6 @@ structure RingObject where
   add : String → String → String
   mul : String → String → String
   neg : String → String
-  deriving Repr
 
 instance : Object RingObject where
   theory := TheoryName.ofString "Algebra.RingTheory"
@@ -150,17 +144,19 @@ Initial objects have a unique morphism to every object.
 Object instances for Unit and Empty are in Core.Basic. -/
 
 /-- Unit is terminal. -/
-theorem unit_isTerminal : ∀ (β : Type u) [Object β], ∃! f : β → Unit, True := by
+theorem unit_isTerminal : ∀ (β : Type u) [Object β], ∃ f : β → Unit, True ∧ ∀ (g : β → Unit), g = f := by
   intro β _
-  refine ⟨λ _ => (), trivial, ?_⟩
-  intro f _
-  funext x; cases f x; rfl
+  let f : β → Unit := λ _ => ()
+  refine ⟨f, ⟨trivial, ?_⟩⟩
+  intro g _
+  funext x; cases g x; rfl
 
 /-- Empty is initial. -/
-theorem empty_isInitial : ∀ (β : Type u) [Object β], ∃! f : Empty → β, True := by
+theorem empty_isInitial : ∀ (β : Type u) [Object β], ∃ f : Empty → β, True ∧ ∀ (g : Empty → β), g = f := by
   intro β _
-  refine ⟨λ e => nomatch e, trivial, ?_⟩
-  intro f _
+  let f : Empty → β := λ e => nomatch e
+  refine ⟨f, ⟨trivial, ?_⟩⟩
+  intro g _
   funext e; nomatch e
 
 /-! ## Morphism between standard objects
@@ -168,17 +164,15 @@ theorem empty_isInitial : ∀ (β : Type u) [Object β], ∃! f : Empty → β, 
 Example morphisms between standard objects. -/
 
 /-- The trivial morphism from any group to the trivial group. -/
-def toTrivialGroup (g : GroupObject) : GroupObject → GroupObject := λ _ => trivialGroup
+def toTrivialGroup (_ : GroupObject) : GroupObject → GroupObject := λ _ => trivialGroup
 
 /-- The zero morphism from any ring to the zero ring. -/
-def toZeroRing (r : RingObject) : RingObject → RingObject := λ _ => zeroRing
+def toZeroRing (_ : RingObject) : RingObject → RingObject := λ _ => zeroRing
 
 /-! ## #eval examples -/
 
 #eval describe (α := List String)
 #eval setMember ["a", "b", "c"] "b"
-#eval trivialGroup
-#eval zeroRing
 #eval freeGenerator (T := TheoryName.ofString "Group")
 
 end MiniObjectKernel

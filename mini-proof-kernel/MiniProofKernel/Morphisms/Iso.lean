@@ -66,7 +66,7 @@ We define the hom by structural recursion on proof trees. -/
 def dnProofHom (Γ : Context) : ProofHom Γ (dnTranslateCtx Γ) where
   map _ p :=
     match p with
-    | .hyp h => .hyp (List.mem_map_of_mem dnTranslate h)
+    | .hyp h => .hyp (List.mem_map_of_mem {a := _} h)
     | .trueI => .trueI
     | .falseE p' => .falseE (map _ p')
     | .andI p' q => .andI (map _ p') (map _ q)
@@ -84,7 +84,7 @@ def dnProofHom (Γ : Context) : ProofHom Γ (dnTranslateCtx Γ) where
     | .equivEr p' => .equivEr (map _ p')
     | .lem => .lem
   preservesHyp h := rfl
-  hmap h := List.mem_map_of_mem dnTranslate h
+  hmap A h := List.mem_map_of_mem dnTranslate h
 
 /-! ## De Morgan Dualities as Proof Isomorphisms -/
 

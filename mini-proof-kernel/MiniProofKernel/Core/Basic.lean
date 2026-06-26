@@ -20,16 +20,20 @@ instance : Membership Formula Context where
 
 def Context.headMem {A : Formula} {Γ : Context} : A ∈ (A :: Γ) := .head _
 def Context.tailMem {A B : Formula} {Γ : Context} (h : A ∈ Γ) : A ∈ (B :: Γ) := .tail _ h
-def Context.Subset (Γ Δ : Context) : Prop := ∀ {A : Formula}, A ∈ Γ → A ∈ Δ
+def Context.Subset (Γ Δ : Context) : Prop := ∀ (A : Formula), A ∈ Γ → A ∈ Δ
 
-def Context.consSubset {Γ Δ : Context} {A : Formula} (hsub : Γ.Subset Δ) :
-    (A :: Γ).Subset (A :: Δ)
-  | _, .head _ => .head _
-  | _, .tail _ h => .tail _ (hsub h)
+def Context.consSubset {Γ Δ : Context} {A : Formula} (hsub : Context.Subset Γ Δ) :
+    Context.Subset (A :: Γ) (A :: Δ) := by
+  intro B h
+  cases h with
+  | head _ => exact .head _
+  | tail _ h' => exact .tail _ (hsub B h')
 
-def Context.subsetRefl (Γ : Context) : Γ.Subset Γ := fun _ h => h
-def Context.subsetCons {Γ : Context} {A : Formula} : Γ.Subset (A :: Γ) :=
-  fun _ h => .tail _ h
+def Context.subsetRefl (Γ : Context) : Context.Subset Γ Γ := by
+  intro A h; exact h
+
+def Context.subsetCons {Γ : Context} {A : Formula} : Context.Subset Γ (A :: Γ) := by
+  intro B h; exact .tail _ h
 
 /-! ## Proof Tree -/
 
@@ -53,14 +57,13 @@ inductive ProofTree : Context → Formula → Type where
   | equivEl (p : ProofTree Γ (.equiv A B)) : ProofTree Γ (.impl A B)
   | equivEr (p : ProofTree Γ (.equiv A B)) : ProofTree Γ (.impl B A)
   | lem : ProofTree Γ (.or A (.not A))
-  deriving Repr
 
 /-! ## Structural Rules -/
 
 def ProofTree.weaken {Γ Δ : Context} {A : Formula}
     (p : ProofTree Γ A) (hsub : Context.Subset Γ Δ) : ProofTree Δ A :=
   match p with
-  | .hyp h => .hyp (hsub h)
+  | .hyp h => .hyp (hsub A h)
   | .trueI => .trueI
   | .falseE p' => .falseE (weaken p' hsub)
   | .andI p' q => .andI (weaken p' hsub) (weaken q hsub)
@@ -113,7 +116,7 @@ all well-typed proofs are automatically valid. We verify this property
 by structural inspection. -/
 def ProofTree.isValid {Γ : Context} {A : Formula} (p : ProofTree Γ A) : Bool :=
   match p with
-  | .hyp h => h.rec (λ _ _ => true) (λ _ _ ih => ih)
+  | .hyp _ => true
   | .trueI => true
   | .falseE p' => p'.isValid
   | .andI p' q => p'.isValid && q.isValid
@@ -138,24 +141,24 @@ def ProofTree.isClosed {Γ : Context} {A : Formula} (p : ProofTree Γ A) : Bool 
   Γ.isEmpty
 
 /-- Collect all atom indices used in a proof tree (both contexts and conclusions). -/
-def ProofTree.atoms {Γ : Context} {A : Formula} : ProofTree Γ A → List Nat
-  | .hyp _ => A.atoms
+def ProofTree.atoms {Γ : Context} {concl : Formula} : ProofTree Γ concl → List Nat
+  | .hyp _ => Formula.atoms concl
   | .trueI => []
-  | .falseE p => .false.atoms ++ atoms p
-  | .andI p q => (.and A B).atoms ++ atoms p ++ atoms q
-  | .andEl p => (.and A B).atoms ++ atoms p
-  | .andEr p => (.and A B).atoms ++ atoms p
-  | .orIl p => (.or A B).atoms ++ atoms p
-  | .orIr p => (.or A B).atoms ++ atoms p
-  | .orE p q r => (.or A B).atoms ++ atoms p ++ atoms q ++ atoms r
-  | .implI p => (.impl A B).atoms ++ atoms p
-  | .implE p q => (.impl A B).atoms ++ atoms p ++ atoms q
-  | .notI p => (.not A).atoms ++ atoms p
-  | .notE p q => (.not A).atoms ++ atoms p ++ atoms q
-  | .equivI p q => (.equiv A B).atoms ++ atoms p ++ atoms q
-  | .equivEl p => (.equiv A B).atoms ++ atoms p
-  | .equivEr p => (.equiv A B).atoms ++ atoms p
-  | .lem => (.or A (.not A)).atoms
+  | .falseE p => Formula.atoms Formula.false ++ atoms p
+  | .andI (A:=A) (B:=B) p q => Formula.atoms (Formula.and A B) ++ atoms p ++ atoms q
+  | .andEl (A:=A) (B:=B) p => Formula.atoms (Formula.and A B) ++ atoms p
+  | .andEr (A:=A) (B:=B) p => Formula.atoms (Formula.and A B) ++ atoms p
+  | .orIl (A:=A) (B:=B) p => Formula.atoms (Formula.or A B) ++ atoms p
+  | .orIr (A:=A) (B:=B) p => Formula.atoms (Formula.or A B) ++ atoms p
+  | .orE (A:=A) (B:=B) p q r => Formula.atoms (Formula.or A B) ++ atoms p ++ atoms q ++ atoms r
+  | .implI (A:=A) (B:=B) p => Formula.atoms (Formula.impl A B) ++ atoms p
+  | .implE (A:=A) (B:=B) p q => Formula.atoms (Formula.impl A B) ++ atoms p ++ atoms q
+  | .notI (A:=A) p => Formula.atoms (Formula.not A) ++ atoms p
+  | .notE (A:=A) p q => Formula.atoms (Formula.not A) ++ atoms p ++ atoms q
+  | .equivI (A:=A) (B:=B) p q => Formula.atoms (Formula.equiv A B) ++ atoms p ++ atoms q
+  | .equivEl (A:=A) (B:=B) p => Formula.atoms (Formula.equiv A B) ++ atoms p
+  | .equivEr (A:=A) (B:=B) p => Formula.atoms (Formula.equiv A B) ++ atoms p
+  | .lem (A:=A) => Formula.atoms (Formula.or A (Formula.not A))
 
 /-- Check if a proof tree is structurally positive (no false-elimination at top). -/
 def ProofTree.isPositive {Γ : Context} {A : Formula} : ProofTree Γ A → Bool

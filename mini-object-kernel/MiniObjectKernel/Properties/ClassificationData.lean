@@ -5,6 +5,7 @@ Data structures for classifying mathematical objects by their invariants.
 -/
 
 import MiniObjectKernel.Core.Basic
+import MiniObjectKernel.Properties.Invariants
 
 namespace MiniObjectKernel
 
@@ -31,7 +32,7 @@ structure ClassificationData (α : Type u) [Object α] where
 
 /-- A classification rule maps invariant values to a class. -/
 structure ClassificationRule where
-  condition : List (String × String) → Bool
+  condition : String  -- pattern to match in invariant data
   outputClass : ObjectClass
   priority : Nat
   deriving Repr
@@ -44,7 +45,8 @@ structure Classifier where
 
 /-- Apply a classifier to invariant data, returning the assigned class. -/
 def Classifier.classify (c : Classifier) (invariants : List (String × String)) : ObjectClass :=
-  match c.rules.find? (λ r => r.condition invariants) with
+  match c.rules.find? (λ r =>
+    invariants.any (λ (k, v) => k == r.condition)) with
   | some rule => rule.outputClass
   | none => c.defaultClass
 
@@ -73,22 +75,8 @@ def InvariantProfile.lookup (p : InvariantProfile) (name : String) : Option Inva
 def InvariantProfile.agreeOn (p q : InvariantProfile) (names : List String) : Bool :=
   names.all (λ n => p.lookup n == q.lookup n)
 
-/-! ## Cardinality type for classification -/
+/-! ## Classification by cardinality: the simplest classification scheme. -/
 
-inductive Cardinality where
-  | finite (n : Nat)
-  | infinite
-  | uncountable
-  deriving BEq, Repr, Inhabited
-
-/-- Convert a cardinality to a simple string for display. -/
-def Cardinality.toString (c : Cardinality) : String :=
-  match c with
-  | finite n => toString n
-  | infinite => "∞"
-  | uncountable => "uncountable"
-
-/-- Classification by cardinality: the simplest classification scheme. -/
 def classifyByCardinality (card : Cardinality) : ObjectClass :=
   match card with
   | Cardinality.finite 0 => { name := "Empty", description := "No elements", typicalExample := "Empty set" }
@@ -106,27 +94,16 @@ def listProfile (xs : List String) : InvariantProfile :=
       ("sorted", InvariantValue.boolVal (match xs with
         | [] => true
         | [x] => true
-        | x :: y :: rest => x ≤ y &&
-          (listProfile (y :: rest)).data.any (λ (n, _) => n == "sorted"))
+        | x :: y :: _ => x ≤ y)
       )
     ] }
 
 /-- Example classifier: classify lists by length. -/
 def listLengthClassifier : Classifier :=
   { rules := [
-      { condition := λ invs =>
-          match invs.find? (λ (n, _) => n == "length") with
-          | some (_, "0") => true
-          | _ => false
-        , outputClass := { name := "EmptyList", description := "Empty list", typicalExample := "[]" }
+      { condition := "length"
+        , outputClass := { name := "HasLength", description := "Has a length invariant", typicalExample := "[1,2,3]" }
         , priority := 1
-      },
-      { condition := λ invs =>
-          match invs.find? (λ (n, _) => n == "length") with
-          | some (_, "1") => true
-          | _ => false
-        , outputClass := { name := "SingletonList", description := "Single-element list", typicalExample := "[x]" }
-        , priority := 2
       }
     ],
     defaultClass := { name := "LongList", description := "Multiple elements", typicalExample := "[1,2,3]" }

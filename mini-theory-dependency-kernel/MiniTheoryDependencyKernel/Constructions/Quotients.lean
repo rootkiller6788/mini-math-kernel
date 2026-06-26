@@ -12,6 +12,8 @@ import MiniTheoryDependencyKernel.Constructions.Subobjects
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Quotient Theory
 
 A quotient theory is formed by adding one or more axioms to an
@@ -136,19 +138,19 @@ def quotientDependencyImpact (baseName : TheoryName) (q : QuotientTheory)
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "SemiGroup")
   let q := t.quotientBy { name := "comm", statement := "∀ x y, x*y = y*x" }
                         (TheoryName.ofString "AbelianSemiGroup")
   (toString q, q.isProperExtension, q.isConservative)
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "Base")
             |>.addAxiom { name := "ax1", statement := "P" }
             |>.addAxiom { name := "ax2", statement := "Q" }
   findIndependentAxioms t |>.length
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "Incomplete")
   let completion := TheoryCompletion.complete t "∀ x, P(x)" true
   completion.completed.axioms.length

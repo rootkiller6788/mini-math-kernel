@@ -14,6 +14,8 @@ import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Main Theorem 1: Valid Dependency Graph Structure
 
 Every theory in a valid dependency graph can be built from
@@ -135,7 +137,7 @@ theorem main_buildOrder_deterministic (g : DependencyGraph) :
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let g : DependencyGraph :=
     { nodes := [ TheoryNode.simple (TheoryName.ofString "Kernel") "Kernel" "1" ""
                , TheoryNode.simple (TheoryName.ofString "Lib") "Lib" "1" "" ]
@@ -144,14 +146,14 @@ theorem main_buildOrder_deterministic (g : DependencyGraph) :
     }
   (g.isValid, g.buildOrder.isSome, g.depth (TheoryName.ofString "Lib"))
 
-#eval do
+#eval
   let g : DependencyGraph :=
     { nodes := [ TheoryNode.simple (TheoryName.ofString "X") "X" "1" "" ]
     , edges := [] }
   let className := TheoryClassification.fromGraph g (TheoryName.ofString "X")
   className.isSome
 
-#eval do
+#eval
   let chain : ExtensionChain := ExtensionChain.singleton
     (FormalTheory.simple (TheoryName.ofString "Base"))
   let chain := chain.extend { name := "ax1", statement := "P" } (TheoryName.ofString "Extended")

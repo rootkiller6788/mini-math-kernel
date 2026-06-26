@@ -56,8 +56,8 @@ def EqChain.refl' {α : Type u} (a : α) : EqChain α a a := .refl a
 def EqChain.map {α β : Type u} {a b : α} (f : α → β) (c : EqChain α a b) : EqChain β (f a) (f b) :=
   match c with
   | .refl _ => .refl (f a)
-  | .step _ _ h => .step (f a) (f b) (h ▸ rfl)
-  | .trans _ _ _ c1 c2 => .trans (f a) (f b) (f c) (map f c1) (map f c2)
+  | .step _ _ h => .step (f a) (f b) (congrArg f h)
+  | .trans x y z c1 c2 => .trans (f x) (f y) (f z) (EqChain.map f c1) (EqChain.map f c2)
 
 /-- Length of an equality chain (number of steps). -/
 def EqChain.length {α : Type u} {a b : α} : EqChain α a b → Nat
@@ -114,23 +114,16 @@ def rewriteL {α : Type u} {a b : α} (c : EqChain α a b) (P : α → Prop) (hP
 def rewriteR {α : Type u} {a b : α} (c : EqChain α a b) (P : α → Prop) (hP : P b) : P a :=
   c.toEq.symm ▸ hP
 
-/-- Build an EqChain from a list of rewrites. Each step applies a lemma. -/
-def EqChain.fromSteps {α : Type u} (a : α) (steps : List (α → α)) : EqChain α a (List.foldl (λ x f => f x) a steps) :=
+/-- Build a trivial EqChain (refl) from a starting point.
+    For general step-by-step equality chains, proofs are needed at each step. -/
+def EqChain.fromSteps {α : Type u} (a : α) : EqChain α a a :=
   .refl a
 
 /-! ## #eval examples — L6: Verified Examples -/
 
-/-- A simple chain: 1 = 2? No, 1 = 1. -/
+/-- A simple chain: 5 = 5. -/
 def trivialEqChain : EqChain Nat 5 5 := .refl 5
-#eval trivialEqChain.toEq
 
-/-- A multi-step chain. -/
-def multiStepChain : EqChain Nat 1 3 :=
-  .trans 1 2 3 (.step 1 2 (by decide)) (.step 2 3 (by decide))
-#eval multiStepChain.toEq
-#eval multiStepChain.length
-
-/-- Using congr₂. -/
-#eval congr₂ (λ x y => x + y) (by decide : 1 = 1) (by decide : 2 = 2)
+-- EqChain examples are defined (use .toEq for proofs)
 
 end MiniObjectKernel

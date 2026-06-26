@@ -1,8 +1,12 @@
 /-
 # Axioms Kernel: Independence Properties
 
-Defines and checks axiom independence within axiom systems.
-An axiom is independent if it is not provable from the others.
+Defines and proves axiom independence within axiom systems.
+An axiom is independent if it is not a logical consequence of
+the remaining axioms (i.e., there exists a countermodel).
+
+Provides proper Prop-level lemmas (§ Independence Theorems) and
+computational classification (§ Axiom Independence).
 -/
 
 import MiniAxiomKernel.Core.Basic
@@ -11,7 +15,80 @@ import MiniAxiomKernel.Constructions.Subobjects
 
 namespace MiniAxiomKernel
 
-/-! ## Axiom Independence -/
+/-! ## Independence Theorems (Prop-level)
+
+In model-theoretic terms, axiom ax is independent of a system Γ
+if there exists a model of Γ \ {ax} that falsifies ax.
+
+Formally: `isIndependentProp sys ax` :=
+  ∃ (assign : Nat → Bool),
+    (∀ ax' ∈ sys.axioms.axioms, ax'.name ≠ ax.name →
+       ax'.statement.eval assign = true) ∧
+    ax.statement.eval assign = false
+-/
+
+/-- An axiom is independent of a system if there exists an assignment
+    that makes all OTHER axioms true while making THIS axiom false.
+    This is the model-theoretic definition of independence. -/
+def isIndependentProp (sys : AxiomSystem) (ax : Axiom) : Prop :=
+  ∃ (assign : Nat → Bool),
+    (∀ ax' ∈ sys.axioms.axioms, ax'.name ≠ ax.name →
+       ax'.statement.eval assign = true) ∧
+    ax.statement.eval assign = false
+
+/-- **Lemma: An independent axiom is not a logical consequence of the others.**
+    If ax is independent, there is no proof of ax from the remaining axioms
+    (where "proof" means semantic entailment: the remaining axioms do not
+    force ax to be true in all models). -/
+lemma independent_not_entailed (sys : AxiomSystem) (ax : Axiom)
+    (hIndep : isIndependentProp sys ax) :
+    ¬ (∀ (assign : Nat → Bool),
+       (∀ ax' ∈ sys.axioms.axioms, ax'.name ≠ ax.name →
+          ax'.statement.eval assign = true) →
+       ax.statement.eval assign = true) := by
+  rcases hIndep with ⟨assign, hOthers, hAxFalse⟩
+  intro hAll
+  have hAxTrue := hAll assign hOthers
+  rw [hAxTrue] at hAxFalse; simp at hAxFalse
+
+/-- **Lemma: An axiom that makes a consistent system inconsistent**
+    **cannot be entailed by the system.** That is, if sys is consistent
+    but sys ∪ {ax} is inconsistent, then ax.statement is not true in
+    every model of sys. So ax is NOT a logical consequence of sys. -/
+lemma contradicting_axiom_not_entailed (sys : AxiomSystem) (ax : Axiom)
+    (hCons : isConsistent sys) (hContra : isInconsistent (sys.addAxiom ax)) :
+    ¬ (∀ (assign : Nat → Bool), isModel assign sys → ax.statement.eval assign = true) := by
+  rcases hCons with ⟨assign, hModel⟩
+  intro hEntail
+  have hAxTrue := hEntail assign hModel
+  -- Now construct a model of sys.addAxiom ax, contradicting hContra
+  have hModelPlus : isModel assign (sys.addAxiom ax) := by
+    intro ax' hax'
+    simp [AxiomSystem.addAxiom, AxiomSet.add] at hax'
+    rcases hax' with (h | h)
+    · exact hModel ax' h
+    · subst h; exact hAxTrue
+  exact hContra ⟨assign, hModelPlus⟩
+
+/-- **Lemma: An independent axiom has a countermodel that is a model**
+    **of the system without that axiom.** If ax is independent, then
+    removing ax yields a consistent system (the countermodel is a model). -/
+lemma independent_implies_consistent_without (sys : AxiomSystem) (ax : Axiom)
+    (hIndep : isIndependentProp sys ax) :
+    isConsistent (removeAxiom sys ax.name) := by
+  rcases hIndep with ⟨assign, hOthers, hAxFalse⟩
+  refine ⟨assign, ?_⟩
+  intro ax' hax'
+  -- ax' is in (removeAxiom sys ax.name).axioms.axioms
+  -- which means ax' ∈ sys.axioms.axioms ∧ ax'.name ≠ ax.name
+  simp [removeAxiom, filterAxioms] at hax'
+  rcases hax' with ⟨haxInSys, hnameNeq⟩
+  exact hOthers ax' haxInSys hnameNeq
+
+/-! ## Axiom Independence (Computational)
+
+The following provides finite-model-search versions of
+independence checking for #eval verification. -/
 
 /-- An axiom is independent of the other axioms in the system if there
     exists a model of all other axioms that falsifies this axiom.

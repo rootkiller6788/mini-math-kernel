@@ -14,6 +14,8 @@ import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Algebraic Theory Dependency Graph
 
 The standard algebraic hierarchy: Set → Magma → Semigroup → Monoid → Group → AbelianGroup →
@@ -85,20 +87,20 @@ def isAlgebraicTheory (name : TheoryName) : Bool :=
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let g := algebraicDependencyGraph
   (g.isAcyclic, g.nodeCount, g.edgeCount, g.maxDepth)
 
-#eval do
+#eval
   let theories := algebraicTheories
   theories.length
 
-#eval do
+#eval
   let g := algebraicDependencyGraph
   let vecSpace := TheoryName.ofString "VectorSpace"
   (g.depth vecSpace, g.depsOf vecSpace, g.edgesTo vecSpace |>.length)
 
-#eval do
+#eval
   let g := algebraicDependencyGraph
   algebraicDependencyReport
 

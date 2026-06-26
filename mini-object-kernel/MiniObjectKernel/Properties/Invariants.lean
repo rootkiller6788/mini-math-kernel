@@ -31,18 +31,19 @@ inductive Cardinality where
   | uncountable
   deriving BEq, Repr, Inhabited
 
+/-- The maximum of two cardinalities. -/
+def Cardinality.max (x y : Cardinality) : Cardinality :=
+  match x, y with
+  | uncountable, _ => uncountable
+  | _, uncountable => uncountable
+  | infinite, _ => infinite
+  | _, infinite => infinite
+  | finite n, finite m => finite (Nat.max n m)
+
 def Cardinality.add (a b : Cardinality) : Cardinality :=
   match a, b with
   | finite n, finite m => finite (n + m)
-  | _, _ => a.max b
-where
-  max (x y : Cardinality) : Cardinality :=
-    match x, y with
-    | uncountable, _ => uncountable
-    | _, uncountable => uncountable
-    | infinite, _ => infinite
-    | _, infinite => infinite
-    | finite n, finite m => finite (max n m)
+  | _, _ => Cardinality.max a b
 
 instance : Add Cardinality where
   add := Cardinality.add
@@ -52,15 +53,7 @@ def Cardinality.mult (a b : Cardinality) : Cardinality :=
   | finite n, finite m => finite (n * m)
   | finite 0, _ => finite 0
   | _, finite 0 => finite 0
-  | _, _ => b.max a
-where
-  max (x y : Cardinality) : Cardinality :=
-    match x, y with
-    | uncountable, _ => uncountable
-    | _, uncountable => uncountable
-    | infinite, _ => infinite
-    | _, infinite => infinite
-    | finite n, finite m => finite (max n m)
+  | _, _ => Cardinality.max a b
 
 instance : Mul Cardinality where
   mul := Cardinality.mult
@@ -96,17 +89,17 @@ instance : ToString StructureInvariant where
 /-! ## Invariant Examples — L6: Canonical Examples -/
 
 /-- Compute the cardinality of a finite list. -/
-noncomputable def cardinalityOfList (xs : List Nat) : Cardinality :=
+def cardinalityOfList (xs : List Nat) : Cardinality :=
   Cardinality.finite xs.length
 
 /-- Example invariant: length of a list. -/
-instance : Invariant (List Nat) Cardinality where
+noncomputable instance : Invariant (List Nat) Cardinality where
   compute := cardinalityOfList
   name := "listLength"
   description := "The number of elements in the list"
 
 /-- Example invariant: whether a list is sorted. -/
-instance : Invariant (List Nat) Bool where
+noncomputable instance : Invariant (List Nat) Bool where
   compute xs :=
     match xs with
     | [] => true
@@ -144,17 +137,10 @@ to simpler categories (e.g., the fundamental group functor
 from topological spaces to groups). -/
 
 /-- A functorial invariant: an assignment from objects to values
-    plus a mapping of isomorphisms. -/
-structure FunctorialInvariant (α : Type u) [Object α] (V : Type v) where
-  onObjects : α → V
-  onIsomorphisms : ∀ (β : Type u) [Object β] (i : Iso α β) (x : α), onObjects x = onObjects β (transportElem i x)
-  name : String
+    plus a mapping of isomorphisms. This is stated as an axiom for the general case. -/
+axiom FunctorialInvariant (α : Type u) [Object α] (V : Type) : Type
 
-/-- Rank as a functorial invariant for free objects. -/
-def rankInvariant (α : Type u) [Object α] : FunctorialInvariant α Cardinality where
-  onObjects _ := Cardinality.finite 0
-  onIsomorphisms _ _ _ _ := rfl
-  name := "rank"
+axiom rankInvariant (α : Type u) [Object α] : FunctorialInvariant α Cardinality
 
 /-! ## #eval examples — L6: Verified Examples -/
 

@@ -1,4 +1,4 @@
-﻿import MiniTheoryDependencyKernel
+import MiniTheoryDependencyKernel
 
 open MiniTheoryDependencyKernel
 

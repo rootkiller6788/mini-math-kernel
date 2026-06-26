@@ -7,6 +7,8 @@ of the math kernel.
 
 import MiniObjectKernel.Core.Basic
 
+open MiniObjectKernel
+
 namespace MiniTheoryDependencyKernel
 
 structure TheoryNode where
@@ -98,14 +100,6 @@ def DependencyGraph.outDegree (g : DependencyGraph) (name : TheoryName) : Nat :=
 
 /-! ## Simple Graph Properties (self-contained) -/
 
-/-- Check if the graph is a DAG (directed acyclic graph). -/
-def DependencyGraph.isDAG (g : DependencyGraph) : Bool :=
-  g.isAcyclic
-
-/-- Check if adding an edge would create a cycle (needs path check). -/
-def DependencyGraph.wouldCreateCycle (g : DependencyGraph) (src tgt : TheoryName) : Bool :=
-  g.hasPath tgt src
-
 /-- Get all edges of a specific dependency kind. -/
 def DependencyGraph.edgesByKind (g : DependencyGraph) (kind : DependencyKind) : List DependencyEdge :=
   g.edges.filter (·.kind == kind)
@@ -134,25 +128,31 @@ def DependencyGraph.adjacencyMatrix (g : DependencyGraph) : List (List Nat) :=
       if g.edges.any (fun e => e.source == src && e.target == tgt) then 1 else 0
 
 /-- Count all paths between two nodes (up to length bound to avoid infinite loops in cyclic graphs). -/
-def DependencyGraph.countPaths (g : DependencyGraph) (from to_ : TheoryName) (maxLen : Nat) : Nat :=
-  go [from] maxLen
+def DependencyGraph.countPaths (g : DependencyGraph) (src to_ : TheoryName) (maxLen : Nat) : Nat :=
+  go [src] maxLen
 where
-  go : List TheoryName → Nat → Nat
-    | _, 0 => 0
-    | path, remaining =>
-      let current := path.headD from
+  go (path : List TheoryName) : Nat → Nat
+    | 0 => 0
+    | fuel + 1 =>
+      let current := path.headD src
       if current == to_ && path.length > 1 then 1
       else
         let nextEdges := g.edgesFrom current
         nextEdges.foldl (fun acc e =>
           if path.contains e.target then acc
-          else acc + go (e.target :: path) (remaining - 1)) 0
+          else acc + go (e.target :: path) fuel) 0
 
-/-- Compute longest path length from a node (follows edges forward). -/
+/-- Compute longest path length from a node (follows edges forward).
+    Uses fuel parameter for structural termination — bounded by nodeCount. -/
 def DependencyGraph.longestPathFrom (g : DependencyGraph) (name : TheoryName) : Nat :=
-  let deps := g.depsOf name
-  if deps.isEmpty then 0
-  else 1 + (deps.map (fun d => g.longestPathFrom d) |>.foldl max 0)
+  go name (g.nodeCount)
+where
+  go (current : TheoryName) : Nat → Nat
+    | 0 => 0
+    | fuel + 1 =>
+      let deps := g.depsOf current
+      if deps.isEmpty then 0
+      else 1 + (deps.map (fun d => go d fuel) |>.foldl max 0)
 
 /-- Topological levels: assign each node its longest distance from a source. -/
 def DependencyGraph.topologicalLevels (g : DependencyGraph) : List (TheoryName × Nat) :=
@@ -173,7 +173,7 @@ def DependencyGraph.sourceNodes (g : DependencyGraph) : List TheoryName :=
 /-- Find all nodes that are both source and sink (isolated nodes). -/
 def DependencyGraph.isolatedNodes (g : DependencyGraph) : List TheoryName :=
   g.nodes.filter (fun n =>
-    g.edgesFrom n.name |>.isEmpty && g.edgesTo n.name |>.isEmpty) |>.map (·.name)
+    (g.edgesFrom n.name).isEmpty && (g.edgesTo n.name).isEmpty) |>.map (·.name)
 
 /-- Compute the minimum/maximum in-degree among all nodes. -/
 def DependencyGraph.degreeStats (g : DependencyGraph) : Nat × Nat × Nat × Nat :=
@@ -209,7 +209,7 @@ def DependencyGraph.reverse (g : DependencyGraph) : DependencyGraph :=
 
 /-- Count the number of nodes with a given property. -/
 def DependencyGraph.countNodesWhere (g : DependencyGraph) (p : TheoryNode → Bool) : Nat :=
-  g.nodes.countP p
+  g.nodes.foldl (fun acc n => if p n then acc + 1 else acc) 0
 
 /-- Grouping helper: partition elements by an equivalence relation. -/
 def List.groupBy (xs : List α) (eq : α → α → Bool) : List (List α) :=

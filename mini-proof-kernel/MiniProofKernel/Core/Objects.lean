@@ -61,7 +61,6 @@ def SequentProof.size : SequentProof σ → Nat
 /-- A normalized proof (beta-normal, eta-long). Wraps a proof tree. -/
 structure NormalProof (Γ : Context) (A : Formula) where
   tree : ProofTree Γ A
-  deriving Repr, Inhabited
 
 /-- An annotated proof with explicit rule names for display. -/
 inductive AnnotatedRule : Type where
@@ -75,7 +74,7 @@ structure DerivationStep where
   rule : AnnotatedRule
   context : Context
   conclusion : Formula
-  deriving Repr, Inhabited
+  deriving Repr
 
 /-- A linearized proof trace (list of derivation steps). -/
 abbrev ProofTrace := List DerivationStep

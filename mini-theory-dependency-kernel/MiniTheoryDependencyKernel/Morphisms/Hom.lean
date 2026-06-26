@@ -11,6 +11,8 @@ import MiniTheoryDependencyKernel.Core.Objects
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Symbol Mapping
 
 A symbol map specifies how each symbol in the source theory's
@@ -124,12 +126,12 @@ def InterpretationGraph.theoriesAbove (ig : InterpretationGraph) (threshold : Th
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "EmptyTheory")
   let idMor := TheoryMorphism.id t
   toString idMor
 
-#eval do
+#eval
   let source := FormalTheory.simple (TheoryName.ofString "SemiGroup")
             |>.addAxiom { name := "assoc", statement := "∀ x y z, (x*y)*z = x*(y*z)" }
   let target := FormalTheory.simple (TheoryName.ofString "Group")
@@ -141,7 +143,7 @@ def InterpretationGraph.theoriesAbove (ig : InterpretationGraph) (threshold : Th
       symbolMap := SymbolMap.empty, axiomPreserving := true }
   (toString mor, mor.axiomPreserving)
 
-#eval do
+#eval
   let ig := InterpretationGraph.empty
   let semi := FormalTheory.simple (TheoryName.ofString "SemiGroup")
               |>.addAxiom { name := "assoc", statement := "assoc" }

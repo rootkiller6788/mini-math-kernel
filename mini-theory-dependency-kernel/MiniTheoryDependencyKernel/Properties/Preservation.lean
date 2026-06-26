@@ -13,6 +13,8 @@ import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Acyclicity Preservation
 
 Adding edges can introduce cycles; removing edges preserves acyclicity.
@@ -160,7 +162,7 @@ def morphismPropertyReport (g : DependencyGraph) (m : TheoryMorphism) : Morphism
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let g : DependencyGraph :=
@@ -168,7 +170,7 @@ def morphismPropertyReport (g : DependencyGraph) (m : TheoryMorphism) : Morphism
     , edges := [{ source := b, target := a, kind := .import, description := none : DependencyEdge }] }
   acyclicityPreservedByRemoval g b a
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let c := TheoryName.ofString "C"
@@ -180,7 +182,7 @@ def morphismPropertyReport (g : DependencyGraph) (m : TheoryMorphism) : Morphism
     }
   checkSubgraphPreservation g [a, b]
 
-#eval do
+#eval
   let t1 := FormalTheory.simple (TheoryName.ofString "T1")
   let t2 := FormalTheory.simple (TheoryName.ofString "T2")
   let cp := ConservativityPreservation.check t1 t2

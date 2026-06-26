@@ -40,5 +40,3 @@ import MiniAxiomKernel.Applications.KnowledgeRepresentation
 
 import MiniAxiomKernel.Advanced.FiniteModelTheory
 import MiniAxiomKernel.Advanced.HomotopyLevel
-
-import MiniAxiomKernel.Benchmark.Basic

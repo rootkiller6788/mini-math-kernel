@@ -15,6 +15,8 @@ import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Counterexample 1: Cyclic Dependency Graph
 
 A dependency graph with a cycle: A depends on B, B depends on C,
@@ -143,22 +145,22 @@ def diamondDependency : DependencyGraph :=
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let g := cyclicDependencyGraph
   (g.isValid, g.isAcyclic, g.topologicalOrder)
 
-#eval do
+#eval
   let g := selfDependencyGraph
   (g.isValid, g.hasSelfDependency (TheoryName.ofString "SelfRef"))
 
-#eval do
+#eval
   let g := missingTransitiveDependency
   let top := TheoryName.ofString "Top"
   let bot := TheoryName.ofString "Bottom"
   let closure := g.transitiveClosure
   (g.hasPath top bot, closure.hasPath top bot)
 
-#eval do
+#eval
   let (t1, t2) := inconsistentTheoryCombination
   let union : TheoryUnion :=
     { theoryA := t1, theoryB := t2, unionName := TheoryName.ofString "Inconsistent" }

@@ -15,6 +15,8 @@ import MiniTheoryDependencyKernel.Morphisms.Equivalence
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Example 1: ZFC Dependency Graph
 
 ZFC depends on first-order logic (FOL) and defines the foundation
@@ -130,20 +132,20 @@ def pa_zffin_mutualInterp : MutualInterpretability :=
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let g := zfcDependencyGraph
   (g.nodeCount, g.edgeCount, g.isAcyclic, g.topologicalOrder)
 
-#eval do
+#eval
   let (magma, semi, mono, group, abel) := groupTheoryHierarchy
   (magma.axioms.length, semi.axioms.length, mono.axioms.length,
    group.axioms.length, abel.axioms.length)
 
-#eval do
+#eval
   let (g, _, _, _) := ringTheoryDependency
   (g.depth (TheoryName.ofString "FieldTheory"), g.maxDepth)
 
-#eval do
+#eval
   let (group, _) := definitionalExtension
   let subRel := SubtheoryRelation.check group (group.addAxiom
     { name := "commutator_def", statement := "comm(x,y) := x*y*x⁻¹*y⁻¹" })

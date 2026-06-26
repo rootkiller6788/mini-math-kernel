@@ -2,7 +2,11 @@
 # Axioms Kernel: Deduction Theorems
 
 Proves and applies deduction theorem variants for axiom systems.
-The deduction theorem states: if Γ ∪ {A} ⊢ B, then Γ ⊢ A → B.
+The deduction theorem (Mendelson, *Introduction to Mathematical Logic*,
+Proposition 1.9) states: Γ ∪ {A} ⊨ B  iff  Γ ⊨ A → B.
+
+We provide both a proper Prop-level proof (§ Semantic Deduction Theorem)
+and computational #eval verifications (§ Computational Checks).
 -/
 
 import MiniAxiomKernel.Core.Basic
@@ -11,7 +15,119 @@ import MiniAxiomKernel.Properties.Decidability
 
 namespace MiniAxiomKernel
 
-/-! ## Semantic Deduction Theorem -/
+/-! ## Semantic Deduction Theorem (Prop-level proof)
+
+The deduction theorem is a fundamental result in mathematical logic.
+In its semantic form, we use ⊨ (semantic entailment / logical consequence):
+
+  Γ ∪ {A} ⊨ B   iff   Γ ⊨ A → B
+
+The proof relies on the truth-table definition of →:
+  (A → B).eval v = true  ↔  A.eval v = false ∨ B.eval v = true
+-/
+
+/-- **Semantic Deduction Theorem** (Mendelson, Proposition 1.9).
+
+    Γ ∪ {A} ⊨ B  ↔  Γ ⊨ A → B
+
+    That is: B is true in every model of Γ∪{A}
+    iff A → B is true in every model of Γ.
+
+    Proof: The forward direction (→) case-splits on whether A is true.
+    If A is false, A→B is vacuously true. If A is true, then every
+    model of Γ∪{A} makes B true, so A→B holds.
+    The backward direction (←) uses the fact that a model of Γ∪{A}
+    is also a model of Γ and makes A true; from Γ ⊨ A→B we deduce B. -/
+theorem deduction_theorem (sys : AxiomSystem) (A B : Formula) :
+    ((∀ (assign : Nat → Bool),
+       isModel assign (sys.addAxiom (Axiom.simple "h" A)) → B.eval assign = true) ↔
+     (∀ (assign : Nat → Bool),
+       isModel assign sys → (.impl A B).eval assign = true)) := by
+  constructor
+  · -- (→): assume Γ∪{A} ⊨ B, prove Γ ⊨ A→B
+    intro hUC assign hModel
+    simp [Formula.eval]
+    by_cases hA : A.eval assign
+    · -- A true → need B true
+      have hModelPlus : isModel assign (sys.addAxiom (Axiom.simple "h" A)) :=
+        (isModel_addAxiom_iff sys (Axiom.simple "h" A) assign).mpr ⟨hModel, hA⟩
+      have hB := hUC assign hModelPlus
+      right; exact hB
+    · -- A false → implication vacuously true
+      left; exact hA
+  · -- (←): assume Γ ⊨ A→B, prove Γ∪{A} ⊨ B
+    intro hCO assign hModelPlus
+    rcases (isModel_addAxiom_iff sys (Axiom.simple "h" A) assign).mp hModelPlus with
+      ⟨hModel, hA⟩
+    have himpl := hCO assign hModel
+    -- himpl : (!(A.eval assign) || B.eval assign) = true
+    simp [Formula.eval] at himpl
+    rcases himpl with (hNotA | hB)
+    · -- A false, contradiction with hA
+      rw [hA] at hNotA; simp at hNotA
+    · -- B true, done
+      exact hB
+
+/-- **Corollary: Deduction theorem for the empty axiom system.**
+    {A} ⊨ B iff A → B is a tautology (true under all assignments).
+    This follows directly from the deduction theorem since the empty
+    system has every assignment as a model. -/
+lemma deduction_empty (A B : Formula) :
+    ((∀ (assign : Nat → Bool),
+       isModel assign (AxiomSystem.empty "E" "1.0" |>.addAxiom (Axiom.simple "h" A)) →
+       B.eval assign = true) ↔
+     (∀ (assign : Nat → Bool), (.impl A B).eval assign = true)) := by
+  have hemptyModel : ∀ (assign : Nat → Bool),
+      isModel assign (AxiomSystem.empty "E" "1.0") := by
+    intro assign ax h; simp [AxiomSystem.empty, AxiomSet.empty] at h
+  constructor
+  · intro h assign
+    -- The empty system has every assignment as a model
+    have := (deduction_theorem (AxiomSystem.empty "E" "1.0") A B).mp h assign
+    exact this (hemptyModel assign)
+  · intro h assign hModelPlusA
+    have := (deduction_theorem (AxiomSystem.empty "E" "1.0") A B).mpr ?_ assign hModelPlusA
+    · exact this
+    · intro assign' hModelEmpty
+      exact h assign'
+
+/-- **Lemma: Semantic Modus Ponens.**
+    If Γ ⊨ A and Γ ⊨ A→B, then Γ ⊨ B.
+    This is the semantic analogue of the modus ponens inference rule.
+    The proof follows directly from the truth-table semantics of →:
+    (A → B).eval v = !(A.eval v) ∨ (B.eval v). -/
+lemma modus_ponens_valid (sys : AxiomSystem) (A B : Formula)
+    (hA : ∀ assign, isModel assign sys → A.eval assign = true)
+    (hAB : ∀ assign, isModel assign sys → (.impl A B).eval assign = true) :
+    ∀ assign, isModel assign sys → B.eval assign = true := by
+  intro assign hModelSys
+  have ha := hA assign hModelSys
+  have hab := hAB assign hModelSys
+  -- hab : (.impl A B).eval assign = true
+  -- By eval definition: !(A.eval assign) || B.eval assign = true
+  simp [Formula.eval] at hab
+  rcases hab with (hNotA | hB)
+  · -- Case: A is false, but hA says A is true → contradiction
+    rw [ha] at hNotA; simp at hNotA
+  · -- Case: B is true, done
+    exact hB
+
+/-- **Lemma: Entailment is monotone.** If Γ ⊨ φ and Γ ⊆ Δ, then Δ ⊨ φ.
+    (Adding more axioms preserves logical consequences.) -/
+lemma entailment_monotone {sys1 sys2 : AxiomSystem} (f : Formula)
+    (hSub : ∀ ax, ax ∈ sys1.axioms.axioms → ax ∈ sys2.axioms.axioms)
+    (hEnt : ∀ assign, isModel assign sys1 → f.eval assign = true) :
+    ∀ assign, isModel assign sys2 → f.eval assign = true := by
+  intro assign hModel2
+  apply hEnt assign
+  intro ax hax
+  exact hModel2 ax (hSub ax hax)
+
+/-! ## Computational Deduction Theorem Checks
+
+The following `def` functions provide finite-model-check versions
+of the deduction theorem for `#eval` verification.
+-/
 
 /-- The semantic deduction theorem: B is a logical consequence of
     sys ∪ {A} if and only if A → B is a logical consequence of sys.

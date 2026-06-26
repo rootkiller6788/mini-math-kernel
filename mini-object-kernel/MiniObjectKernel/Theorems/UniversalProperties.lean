@@ -81,14 +81,8 @@ axiom product_unique {α β γ δ : Type u} [Object α] [Object β] [Object γ] 
     (π₁ : γ → α) (π₂ : γ → β) (hp : IsProduct α β γ π₁ π₂)
     (σ₁ : δ → α) (σ₂ : δ → β) (hq : IsProduct α β δ σ₁ σ₂) : Iso γ δ
 
-/-- The canonical product of α and β via the product type is a product. -/
-instance : Object (α × β) where
-  theory := TheoryName.ofString "ProductTheory"
-  objName := s!"Product"
-  repr p := s!"({repr p.1}, {repr p.2})"
-
 /-- The product type is a product in the categorical sense
-    (uses canonical Object instances from Core.Basic). -/
+    (uses canonical Object instances from Core.Objects and Core.Basic). -/
 theorem pair_product_is_product (α β : Type u) [Object α] [Object β] :
     IsProduct α β (α × β) Prod.fst Prod.snd := by
   intro X _ f g

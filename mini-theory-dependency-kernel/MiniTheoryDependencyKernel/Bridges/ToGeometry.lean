@@ -1,4 +1,4 @@
-﻿/-
+/-
 # Dependency Kernel: Bridge to Geometry
 
 Geometric theories and their dependency structures: Euclidean geometry,
@@ -13,6 +13,8 @@ import MiniTheoryDependencyKernel.Constructions.Products
 import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel
+
+open MiniObjectKernel
 
 /-! ## Geometric Theory Hierarchy
 
@@ -103,21 +105,21 @@ def isGeometricTheory (name : TheoryName) : Bool :=
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let g := geometryDependencyGraph
   (g.isAcyclic, g.nodeCount, g.edgeCount, g.maxDepth)
 
-#eval do
+#eval
   let theories := geometricTheories
   theories.length
 
-#eval do
+#eval
   let g := geometryDependencyGraph
   let algGeo := TheoryName.ofString "AlgebraicGeometry"
   let deps := g.transitiveDeps algGeo
   (g.depth algGeo, deps.length, deps)
 
-#eval do
+#eval
   let g := geometryDependencyGraph
   geometryDependencyReport
 

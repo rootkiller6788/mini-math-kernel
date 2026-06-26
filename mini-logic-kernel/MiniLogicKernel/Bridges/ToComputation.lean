@@ -44,14 +44,16 @@ inductive SimpleType : Type where
   | arr  : SimpleType → SimpleType → SimpleType
   deriving BEq, DecidableEq, Repr, Inhabited
 
+def SimpleType.toStringAux : SimpleType → String
+  | .base n => "P" ++ ToString.toString n
+  | .unit => "Unit"
+  | .void => "Void"
+  | .prod A B => "(" ++ SimpleType.toStringAux A ++ " × " ++ SimpleType.toStringAux B ++ ")"
+  | .sum A B => "(" ++ SimpleType.toStringAux A ++ " ⊕ " ++ SimpleType.toStringAux B ++ ")"
+  | .arr A B => "(" ++ SimpleType.toStringAux A ++ " → " ++ SimpleType.toStringAux B ++ ")"
+
 instance : ToString SimpleType where
-  toString
-    | .base n => s!"P{n}"
-    | .unit => "Unit"
-    | .void => "Void"
-    | .prod A B => s!"({A} × {B})"
-    | .sum A B => s!"({A} ⊕ {B})"
-    | .arr A B => s!"({A} → {B})"
+  toString := SimpleType.toStringAux
 
 /--
 Translation from propositional formulas to simple types

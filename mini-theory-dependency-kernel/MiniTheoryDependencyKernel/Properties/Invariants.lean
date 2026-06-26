@@ -11,6 +11,8 @@ import MiniTheoryDependencyKernel.Core.Objects
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Dependency Closure
 
 The dependency closure of a theory is the set of all theories
@@ -299,7 +301,7 @@ def DependencyGraph.topologicalOrderCount (g : DependencyGraph) : Nat :=
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let c := TheoryName.ofString "C"
@@ -312,7 +314,7 @@ def DependencyGraph.topologicalOrderCount (g : DependencyGraph) : Nat :=
     }
   (g.leafTheories, g.rootTheories, g.depth a, g.impactFactor a, g.degreeCentrality a)
 
-#eval do
+#eval
   let a := TheoryName.ofString "Kernel"
   let b := TheoryName.ofString "Algebra"
   let c := TheoryName.ofString "Analysis"
@@ -325,11 +327,11 @@ def DependencyGraph.topologicalOrderCount (g : DependencyGraph) : Nat :=
     }
   (g.maxDepth, g.maxWidth, g.rankAll, g.avgDegree, g.density, g.balanceRatio)
 
-#eval do
+#eval
   let connectivity := (DependencyGraph.empty).connectivity
   connectivity
 
-#eval do
+#eval
   let a := TheoryName.ofString "Base"
   let b := TheoryName.ofString "Mid"
   let c := TheoryName.ofString "Top"
@@ -343,7 +345,7 @@ def DependencyGraph.topologicalOrderCount (g : DependencyGraph) : Nat :=
   (g.structuralSummary, g.topologicalLayers, g.layerWidths, g.maxLayerWidth,
    g.cyclomaticComplexity, g.dependencyDiameter)
 
-#eval do
+#eval
   let a := TheoryName.ofString "Core"
   let b := TheoryName.ofString "Plugin"
   let g : DependencyGraph :=

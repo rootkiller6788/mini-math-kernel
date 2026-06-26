@@ -216,13 +216,13 @@ theorem propositionalFiniteControllability :
 def maxAxiomComplexity (sys : AxiomSystem) : Nat :=
   match sys.axioms.axioms with
   | [] => 0
-  | axs => axs.map (x => ax.statement.complexity) |>.foldl max 0
+  | axs => axs.map (fun ax => ax.statement.complexity) |>.foldl max 0
 
 /-- The formula size (number of connectives + atoms) in the largest axiom. -/
 def maxAxiomSize (sys : AxiomSystem) : Nat :=
   match sys.axioms.axioms with
   | [] => 0
-  | axs => axs.map (x => formulaSize ax.statement) |>.foldl max 0
+  | axs => axs.map (fun ax => formulaSize ax.statement) |>.foldl max 0
 where
   formulaSize : Formula -> Nat
     | .atom _ => 1

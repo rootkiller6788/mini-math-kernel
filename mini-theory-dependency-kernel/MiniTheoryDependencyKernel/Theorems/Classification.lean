@@ -13,6 +13,8 @@ import MiniTheoryDependencyKernel.Morphisms.Equivalence
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Theorem: Interpretability is Reflexive
 
 Every theory interprets itself via the identity morphism.
@@ -207,25 +209,25 @@ theorem axiomatizability_total (t : FormalTheory) :
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "Empty")
   let mi := MutualInterpretability.reflexive t
   (interpretability_reflexive t, toString mi)
 
-#eval do
+#eval
   let g : DependencyGraph :=
     { nodes := [ TheoryNode.simple (TheoryName.ofString "Base") "" "" "" ]
     , edges := [] }
   (classification_fromGraph_exists_for_node g (TheoryName.ofString "Base") (by native_decide),
    classifyByProfile g |>.length, g.rootTheories.length)
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "PA")
             |>.addAxiom { name := "ind", statement := "induction" }
   let c := AxiomatizabilityClass.ofTheory t
   (toString c, c == .finite, axiomatizability_total t)
 
-#eval do
+#eval
   let a := TheoryName.ofString "Fundamental"
   let b := TheoryName.ofString "Derived"
   let g : DependencyGraph :=
@@ -235,7 +237,7 @@ theorem axiomatizability_total (t : FormalTheory) :
     }
   (mostFundamental g, mostDerived g)
 
-#eval do
+#eval
   let profiles := classifyByProfile DependencyGraph.empty
   (mostFundamental_empty_graph_none, profiles.length)
 

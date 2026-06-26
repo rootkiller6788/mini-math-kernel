@@ -11,6 +11,8 @@ import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 def DependencyGraph.topologicalOrder (g : DependencyGraph) : Option (List TheoryName) :=
   let inDegree (name : TheoryName) : Nat :=
     g.edges.filter (·.target == name) |>.length
@@ -283,7 +285,7 @@ def DependencyGraph.difference (g1 g2 : DependencyGraph) : DependencyGraph :=
 
 /-! ## Evaluations for new operations -/
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let g : DependencyGraph :=
@@ -292,13 +294,13 @@ def DependencyGraph.difference (g1 g2 : DependencyGraph) : DependencyGraph :=
     , edges := [{ source := b, target := a, kind := .import, description := none }] }
   (g.isForest, g.isTree, g.inDegree a, g.outDegree a)
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let g : DependencyGraph :=
     { nodes := [ TheoryNode.simple a "A" "1" "" ], edges := [] }
   (g.condensation.nodeCount, g.sccCount, g.isWeaklyConnected)
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let c := TheoryName.ofString "C"
@@ -311,7 +313,7 @@ def DependencyGraph.difference (g1 g2 : DependencyGraph) : DependencyGraph :=
     }
   (g.sourceNodes, g.sinkNodes, g.isolatedNodes)
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let b := TheoryName.ofString "B"
   let g1 : DependencyGraph :=

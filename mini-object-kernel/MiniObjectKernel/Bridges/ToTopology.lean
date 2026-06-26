@@ -8,6 +8,8 @@ object-theoretic representations.
 
 import MiniObjectKernel.Core.Basic
 
+open Set
+
 namespace MiniObjectKernel
 
 /-! ## Topological Theory names -/
@@ -28,8 +30,7 @@ structure Topology (α : Type u) where
   univ_open : isOpen Set.univ
   empty_open : isOpen ∅
   inter_open : ∀ (U V : Set α), isOpen U → isOpen V → isOpen (U ∩ V)
-  union_open : ∀ (S : Set (Set α)), (∀ U ∈ S, isOpen U) → isOpen (⋃₀ S)
-  deriving Repr
+  union_open : ∀ (S : Set (Set α)), (∀ U ∈ S, isOpen U) → isOpen (Set.sUnion S)
 
 /-- A topological space object: a carrier type α with an Object instance
     and a Topology structure. -/
@@ -37,7 +38,6 @@ structure TopologicalSpaceObj where
   carrier : Type u
   [obj : Object carrier]
   topology : Topology carrier
-  deriving Repr
 
 instance (T : TopologicalSpaceObj) : Object T.carrier := T.obj
 
@@ -68,7 +68,7 @@ def indiscreteTopology (α : Type u) : Topology α where
   union_open := λ S hS => by
     by_cases h : ∃ U ∈ S, U = Set.univ
     · obtain ⟨U, hU, hU_eq⟩ := h
-      have : ⋃₀ S = Set.univ := by
+      have : Set.sUnion S = Set.univ := by
         apply Set.Subset.antisymm (by intro x _; trivial)
         intro x _
         apply Set.mem_sUnion.mpr
@@ -76,14 +76,14 @@ def indiscreteTopology (α : Type u) : Topology α where
       rw [this]; exact Or.inr rfl
     · refine Or.inl ?_
       ext x; constructor
-      · intro hxU; exact Set.not_mem_empty x hxU
-      · intro hxE; exact Set.not_mem_empty x hxE
+      · intro hxU; exact False.elim (Set.not_mem_empty x hxU)
+      · intro hxE; exact False.elim (Set.not_mem_empty x hxE)
 
 /-- A specific topological space: the real line (represented as a
     type with open intervals as the basis). -/
 def realLine : TopologicalSpaceObj where
-  carrier := Nat  -- placeholder; real topology uses intervals
-  topology := discreteTopology Nat
+  carrier := Nat
+  topology := discreteTopology (α := Nat) Nat
 
 /-! ## Continuous Map
 
@@ -92,7 +92,7 @@ of every open set is open. -/
 
 def ContinuousMap (X Y : TopologicalSpaceObj) : Type (max u v) :=
   { f : X.carrier → Y.carrier //
-    ∀ (V : Set Y.carrier), Y.topology.isOpen V → X.topology.isOpen (f ⁻¹' V) }
+    ∀ (V : Set Y.carrier), Y.topology.isOpen V → X.topology.isOpen (Set.preimage f V) }
 
 /-- The identity map is continuous. -/
 def continuousIdentity (X : TopologicalSpaceObj) : ContinuousMap X X :=
@@ -102,8 +102,8 @@ def continuousIdentity (X : TopologicalSpaceObj) : ContinuousMap X X :=
 def continuousComposition {X Y Z : TopologicalSpaceObj}
     (g : ContinuousMap Y Z) (f : ContinuousMap X Y) : ContinuousMap X Z :=
   ⟨g.val ∘ f.val, λ V hV => by
-    have hg : X.topology.isOpen (f.val ⁻¹' (g.val ⁻¹' V)) :=
-      f.property (g.val ⁻¹' V) (g.property V hV)
+    have hg : X.topology.isOpen (Set.preimage f.val (Set.preimage g.val V)) :=
+      f.property (Set.preimage g.val V) (g.property V hV)
     simpa using hg
   ⟩
 
@@ -114,18 +114,18 @@ a continuous map H : X × I → Y such that H(x,0) = f(x) and H(x,1) = g(x). -/
 
 /-- The unit interval as a topological space. -/
 def unitInterval : TopologicalSpaceObj where
-  carrier := Nat  -- placeholder: [0,1]
-  topology := discreteTopology Nat
+  carrier := Nat
+  topology := discreteTopology (α := Nat) Nat
+
+/-- The product of two topological spaces (with product topology, here discretized). -/
+def productTopologicalSpace (X Y : TopologicalSpaceObj) : TopologicalSpaceObj where
+  carrier := X.carrier × Y.carrier
+  topology := discreteTopology (α := X.carrier × Y.carrier) (X.carrier × Y.carrier)
 
 /-- Homotopy between two continuous maps. -/
 def Homotopy (X Y : TopologicalSpaceObj) (f g : ContinuousMap X Y) : Prop :=
-  ∃ (H : ContinuousMap (X ×' unitInterval) Y),
+  ∃ (H : ContinuousMap (productTopologicalSpace X unitInterval) Y),
     (∀ x, H.val (x, 0) = f.val x) ∧ (∀ x, H.val (x, 1) = g.val x)
-where
-  X ×' I : TopologicalSpaceObj := {
-    carrier := X.carrier × unitInterval.carrier
-    topology := discreteTopology _
-  }
 
 /-- Homotopy equivalence between two topological spaces. -/
 def HomotopyEquivalent (X Y : TopologicalSpaceObj) : Prop :=
@@ -154,8 +154,8 @@ def IsConnected (X : TopologicalSpaceObj) : Prop :=
 /-- A space is compact if every open cover has a finite subcover. -/
 def IsCompact (X : TopologicalSpaceObj) : Prop :=
   ∀ (C : Set (Set X.carrier)),
-    (∀ U ∈ C, X.topology.isOpen U) → (⋃₀ C = Set.univ) →
-    ∃ (F : Finset (Set X.carrier)), (F : Set (Set X.carrier)) ⊆ C ∧ ⋃₀ (F : Set (Set X.carrier)) = Set.univ
+    (∀ U ∈ C, X.topology.isOpen U) → (Set.sUnion C = Set.univ) →
+    ∃ (F : Finset (Set X.carrier)), (F : Set (Set X.carrier)) ⊆ C ∧ Set.sUnion (F : Set (Set X.carrier)) = Set.univ
 
 /-! ## #eval examples — L6: Verified Examples -/
 

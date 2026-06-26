@@ -12,6 +12,8 @@ import MiniTheoryDependencyKernel.Morphisms.Hom
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Theory Isomorphism
 
 A theory isomorphism is a pair of morphisms that are mutual inverses.
@@ -133,12 +135,12 @@ def DependencyGraph.rename (g : DependencyGraph) (renaming : List (TheoryName ×
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "Trivial")
   let iso := TheoryIsomorphism.ofIdentity t
   (toString iso, iso.isValid)
 
-#eval do
+#eval
   let g1 : DependencyGraph :=
     { nodes := [TheoryNode.simple (TheoryName.ofString "A") "A" "1" ""
                ,TheoryNode.simple (TheoryName.ofString "B") "B" "1" ""]
@@ -149,7 +151,7 @@ def DependencyGraph.rename (g : DependencyGraph) (renaming : List (TheoryName ×
                        ,(TheoryName.ofString "B", TheoryName.ofString "Y")]
   (g1.invariants, g2.invariants, invariantCheck g1 g2)
 
-#eval do
+#eval
   let g1 : DependencyGraph :=
     { nodes := [TheoryNode.simple (TheoryName.ofString "X") "X" "1" ""]
     , edges := []

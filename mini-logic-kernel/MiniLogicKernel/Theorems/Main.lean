@@ -21,7 +21,7 @@ of a set Γ of formulas is satisfiable, then Γ itself is satisfiable.
 
 Proof sketch (via Konig's lemma / Tychonoff's theorem):
 1. The space of truth assignments {0,1}^ω is compact (Tychonoff).
-2. For each formula f ∈ Γ, the set V(f) = {σ | f.eval σ = true} is
+2. For each formula f ∈ Γ, the set V(f) = (λ σ => f.eval σ = true) is
    closed (in fact clopen) in the product topology.
 3. The family {V(f) | f ∈ Γ} has the finite intersection property
    (by the hypothesis that every finite subset of Γ is satisfiable).
@@ -138,11 +138,13 @@ theorem adequacy : Adequacy := by
 Adequacy with assumptions: Γ derives f iff Γ semantically implies f.
 -/
 
+/-- Generalized adequacy: for any finite list of formulas Γ = [g₁,...,gₙ],
+    if Γ semantically implies f (i.e., every model of all gᵢ is a model of f),
+    then (g₁ ∧ ... ∧ gₙ) → f is derivable. -/
 def GeneralizedAdequacy : Prop :=
-  ∀ (Γ : Set Formula) (f : Formula),
-    (∃ (Δ : Set Formula), Δ ⊆ Γ ∧ Set.Finite Δ ∧ Derivable (Formula.impl
-      ((Δ.toList.map id).foldr Formula.and Formula.true) f)) ↔
-    semanticConsequence Γ f
+  ∀ (l : List Formula) (f : Formula),
+    semanticConsequence (λ x => x ∈ l) f →
+    Derivable (Formula.impl (l.foldr Formula.and Formula.true) f)
 
 axiom generalized_adequacy : GeneralizedAdequacy
 

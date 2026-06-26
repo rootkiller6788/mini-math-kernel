@@ -13,6 +13,8 @@ import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Topological Theory Hierarchy
 
 The standard topological theory dependencies:
@@ -91,20 +93,20 @@ def findDomainDependencies (g : DependencyGraph) (domainName : TheoryName) : Lis
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let g := topologyDependencyGraph
   (g.isAcyclic, g.nodeCount, g.edgeCount)
 
-#eval do
+#eval
   let theories := topologicalTheories
   theories.length
 
-#eval do
+#eval
   let g := topologyDependencyGraph
   let algTop := TheoryName.ofString "AlgebraicTopology"
   (g.depth algTop, g.dependencyClosureSize algTop)
 
-#eval do
+#eval
   let g := topologyDependencyGraph
   topologyDependencyReport
 

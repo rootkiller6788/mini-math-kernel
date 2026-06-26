@@ -10,6 +10,8 @@ import MiniTheoryDependencyKernel.Core.Objects
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Subtheory Relation
 
 A theory T' is a subtheory of T if the signature of T' is contained
@@ -123,7 +125,7 @@ def SubtheoryLattice.minimalSubtheories (l : SubtheoryLattice) : List FormalTheo
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let semi := FormalTheory.simple (TheoryName.ofString "SemiGroup")
               |>.addAxiom { name := "assoc", statement := "assoc" }
   let group := semi.addAxiom { name := "ident", statement := "ident" }
@@ -131,7 +133,7 @@ def SubtheoryLattice.minimalSubtheories (l : SubtheoryLattice) : List FormalTheo
   let rel := SubtheoryRelation.check semi group
   (toString rel, rel.isSubtheory)
 
-#eval do
+#eval
   let nA := TheoryNode.simple (TheoryName.ofString "A") "" "" ""
   let nB := TheoryNode.simple (TheoryName.ofString "B") "" "" ""
   let nC := TheoryNode.simple (TheoryName.ofString "C") "" "" ""
@@ -141,7 +143,7 @@ def SubtheoryLattice.minimalSubtheories (l : SubtheoryLattice) : List FormalTheo
   let sub := g.inducedSubgraph [TheoryName.ofString "A", TheoryName.ofString "B"]
   (sub.nodeCount, sub.edgeCount)
 
-#eval do
+#eval
   let lattice := SubtheoryLattice.ofTheory (FormalTheory.simple (TheoryName.ofString "Group")
                 |>.addAxiom { name := "assoc", statement := "assoc" }
                 |>.addAxiom { name := "ident", statement := "ident" })

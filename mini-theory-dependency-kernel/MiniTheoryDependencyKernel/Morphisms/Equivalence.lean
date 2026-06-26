@@ -13,6 +13,8 @@ import MiniTheoryDependencyKernel.Morphisms.Iso
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Mutual Interpretability
 
 Two theories are mutually interpretable if each can be interpreted
@@ -147,17 +149,17 @@ def classifyByAxiomCount (theories : List FormalTheory) : List EquivalenceClass 
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "Test")
   let mi := MutualInterpretability.reflexive t
   toString mi
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "Test")
   let eq := TheoryEquivalence.reflexive t
   (toString eq, eq.symmetric |>.toString)
 
-#eval do
+#eval
   let t1 := FormalTheory.simple (TheoryName.ofString "T1")
   let t2 := FormalTheory.simple (TheoryName.ofString "T2")
   let t3 := FormalTheory.simple (TheoryName.ofString "T3")

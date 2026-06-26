@@ -27,11 +27,11 @@ def AssignmentSpace : Type := Nat → Bool
 
 /-- A basic open set: all assignments making a given formula true. -/
 def basicOpen (f : Formula) : Set AssignmentSpace :=
-  {σ | f.eval σ = true}
+  (λ σ => f.eval σ = true)
 
 /-- The family of all basic open sets forms a basis for the product topology. -/
 def basicOpens : Set (Set AssignmentSpace) :=
-  {U | ∃ f : Formula, U = basicOpen f}
+  (λ U => ∃ f : Formula, U = basicOpen f)
 
 /-! ## Boolean Operations on Basic Opens
 
@@ -40,28 +40,28 @@ This is the key observation behind Stone duality.
 -/
 
 theorem basicOpen_true : basicOpen Formula.true = Set.univ := by
-  ext σ; simp [basicOpen, Formula.eval]
+  ext σ; dsimp [basicOpen, Set.univ]; simp [Formula.eval]
 
 theorem basicOpen_false : basicOpen Formula.false = ∅ := by
-  ext σ; simp [basicOpen, Formula.eval]
+  ext σ; dsimp [basicOpen]; simp [Formula.eval]
 
-theorem basicOpen_atom (n : Nat) : basicOpen (Formula.atom n) = {σ | σ n = true} := by
-  ext σ; simp [basicOpen, Formula.eval]
+theorem basicOpen_atom (n : Nat) : basicOpen (Formula.atom n) = (λ σ => σ n = true) := by
+  ext σ; dsimp [basicOpen]; simp [Formula.eval]
 
-theorem basicOpen_not (A : Formula) : basicOpen (Formula.not A) = (basicOpen A)ᶜ := by
-  ext σ; simp [basicOpen, Formula.eval, Set.mem_compl_iff]
+theorem basicOpen_not (A : Formula) : basicOpen (Formula.not A) = Set.compl (basicOpen A) := by
+  ext σ; dsimp [basicOpen, Set.compl]; simp [Formula.eval]
 
 theorem basicOpen_and (A B : Formula) : basicOpen (Formula.and A B) = basicOpen A ∩ basicOpen B := by
-  ext σ; simp [basicOpen, Formula.eval, Set.mem_inter_iff]
+  ext σ; dsimp [basicOpen, Set.inter]; simp [Formula.eval]
 
 theorem basicOpen_or (A B : Formula) : basicOpen (Formula.or A B) = basicOpen A ∪ basicOpen B := by
-  ext σ; simp [basicOpen, Formula.eval, Set.mem_union]
+  ext σ; dsimp [basicOpen, Set.union]; simp [Formula.eval]
 
-theorem basicOpen_impl (A B : Formula) : basicOpen (Formula.impl A B) = (basicOpen A)ᶜ ∪ basicOpen B := by
-  ext σ; simp [basicOpen, Formula.eval, Set.mem_compl_iff, Set.mem_union]
+theorem basicOpen_impl (A B : Formula) : basicOpen (Formula.impl A B) = Set.compl (basicOpen A) ∪ basicOpen B := by
+  ext σ; dsimp [basicOpen, Set.union, Set.compl]; simp [Formula.eval]
 
-theorem basicOpen_equiv (A B : Formula) : basicOpen (Formula.equiv A B) = ((basicOpen A)ᶜ ∪ basicOpen B) ∩ ((basicOpen B)ᶜ ∪ basicOpen A) := by
-  ext σ; simp [basicOpen, Formula.eval, Set.mem_inter_iff, Set.mem_compl_iff, Set.mem_union]
+theorem basicOpen_equiv (A B : Formula) : basicOpen (Formula.equiv A B) = (Set.compl (basicOpen A) ∪ basicOpen B) ∩ (Set.compl (basicOpen B) ∪ basicOpen A) := by
+  ext σ; dsimp [basicOpen, Set.inter, Set.union, Set.compl]; simp [Formula.eval]
 
 /-! ## Clopen Sets
 
@@ -109,7 +109,7 @@ theorem basicOpen_congr (A B : Formula) (h : ∀ σ, A.eval σ = B.eval σ) : ba
 
 A point in the Stone space corresponds to a truth assignment σ.
 The ultrafilter determined by σ is the set of all formulas true under σ:
-  U_σ = {f | f.eval σ = true}
+  U_σ = (λ f => f.eval σ = true)
 
 Conversely, every ultrafilter of the Lindenbaum algebra corresponds to
 a unique truth assignment (in the classical, two-valued setting).
@@ -117,7 +117,7 @@ a unique truth assignment (in the classical, two-valued setting).
 
 /-- The ultrafilter of formulas true under a given assignment. -/
 def ultrafilter (σ : AssignmentSpace) : Set Formula :=
-  {f | f.eval σ = true}
+  (λ f => f.eval σ = true)
 
 /--
 Properties of the ultrafilter determined by σ:
@@ -135,7 +135,12 @@ theorem ultrafilter_decides (σ : AssignmentSpace) (A : Formula) :
   simp [ultrafilter, Formula.eval]
   by_cases h : A.eval σ = true
   · left; exact h
-  · right; have h' : A.eval σ = false := Bool.eq_false_of_not_eq_true h; simp [h']
+  · right
+    have h' : A.eval σ = false := by
+      cases hval : A.eval σ
+      · rfl
+      · simp [h] at hval
+    simp [h']
 
 /-! ## Stone Duality
 
@@ -165,30 +170,29 @@ theorem stoneDualityIsomorphism_holds : stoneDualityIsomorphism := by
   constructor
   · intro h; ext σ; simp [basicOpen, h σ]
   · intro h σ
-    have hmem : (fun _ => true) ∈ basicOpen A ↔ (fun _ => true) ∈ basicOpen B := by
-      rw [h]
-    -- Actually, equality of sets implies equality of membership for all σ
-    -- This requires that we can test membership for arbitrary σ
-    -- which is true since basicOpen A = {σ | A.eval σ = true}
-    have h' : (basicOpen A).indicator = (basicOpen B).indicator := by rw [h]
-    -- Simpler: from h, apply to σ directly
-    have hA : σ ∈ basicOpen A ↔ A.eval σ = true := by simp [basicOpen]
-    have hB : σ ∈ basicOpen B ↔ B.eval σ = true := by simp [basicOpen]
-    have hmem' : σ ∈ basicOpen A ↔ σ ∈ basicOpen B := by rw [h]
-    rw [hA, hB] at hmem'
-    -- hmem' gives: A.eval σ = true ↔ B.eval σ = true
-    -- For Bool values, this implies equality
-    apply propext at hmem'
-    -- Actually, for Bool: (b = true ↔ c = true) → b = c
-    -- This holds because Bool only has true and false
-    by_cases hAval : A.eval σ = true
+    -- From h : basicOpen A = basicOpen B, deduce membership equivalence
+    have hmem' : (basicOpen A σ) ↔ (basicOpen B σ) := by
+      simpa [h]
+    -- Unfold basicOpen definitions
+    dsimp [basicOpen] at hmem'
+    -- Now hmem' : (A.eval σ = true) ↔ (B.eval σ = true)
+    -- For Bool, this implies equality
+    have hval := hmem'.mp ?_
+    · apply hmem'.mpr
+    -- Actually, let's use by_cases
+    by_cases hAval : A.eval σ
     · have hBval := (hmem'.mp hAval)
       rw [hAval, hBval]
-    · have hAfalse : A.eval σ = false := Bool.eq_false_of_not_eq_true hAval
+    · have hAfalse : A.eval σ = false := by
+        cases h : A.eval σ
+        · rfl
+        · simp [hAval] at h
       have hBfalse : B.eval σ = false := by
-        by_contra! hBt
-        have hAt := hmem'.mpr hBt
-        rw [hAfalse] at hAt; simp at hAt
+        cases hB : B.eval σ
+        · rfl
+        · have := hmem'.mpr hB
+          rw [hAfalse] at this
+          simp at this
       rw [hAfalse, hBfalse]
 
 /-! ## Topological Compactness

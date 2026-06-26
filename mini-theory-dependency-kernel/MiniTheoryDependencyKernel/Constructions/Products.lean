@@ -11,6 +11,8 @@ import MiniTheoryDependencyKernel.Core.Objects
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Theory Union
 
 The union of two theories combines their signatures and axioms.
@@ -157,7 +159,7 @@ def DependencyGraph.mergeWithBridge (g1 g2 : DependencyGraph)
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let t1 := FormalTheory.simple (TheoryName.ofString "Monoid")
             |>.addAxiom { name := "assoc", statement := "assoc" }
             |>.addAxiom { name := "ident", statement := "ident" }
@@ -168,7 +170,7 @@ def DependencyGraph.mergeWithBridge (g1 g2 : DependencyGraph)
   let union : TheoryUnion := { theoryA := t1, theoryB := t2, unionName := TheoryName.ofString "Union" }
   union.combined.axioms.length
 
-#eval do
+#eval
   let t1 := FormalTheory.simple (TheoryName.ofString "T1")
   let t2 := FormalTheory.simple (TheoryName.ofString "T2")
   let comb : TheoryCombination :=
@@ -176,7 +178,7 @@ def DependencyGraph.mergeWithBridge (g1 g2 : DependencyGraph)
     , combinedName := TheoryName.ofString "Combined" }
   (toString comb, comb.isRobinsonCompatible)
 
-#eval do
+#eval
   let sig : Signature := { constants := ["e"], functions := [("*", 2)], relations := [] }
   let freeT := Signature.freeTheory sig (TheoryName.ofString "FreeMagma")
   (freeT.signature.size, freeT.axioms.length)

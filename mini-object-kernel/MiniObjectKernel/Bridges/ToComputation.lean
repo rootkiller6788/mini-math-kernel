@@ -61,10 +61,8 @@ instance : ComputationalObject Char where
   decEq := inferInstance
   encode c := toString c
   decode s :=
-    if h : s.length = 1 then some (s.get ⟨0, by
-      have : 0 < s.length := by
-        rw [h]; exact Nat.zero_lt_one
-      exact this⟩)
+    if s.length = 1 then
+      s.get? 0 |>.bind (λ c => some c)
     else none
 
 /-! ## Program as an Object
@@ -73,13 +71,24 @@ A program is an object that computes a function from input to output.
 We model this as a "morphism" in the category of computational objects. -/
 
 /-- A program object: a function from input type α to output type β,
-    represented as a finite state machine or expression tree. -/
+    represented as a finite state machine or expression tree. We use
+    a simplified untyped representation for flexibility. -/
 inductive ProgramExpr (α β : Type u) [Object α] [Object β] where
   | input (idx : Nat) : ProgramExpr α β
   | const (val : β) : ProgramExpr α β
-  | apply (fn : String) (args : List (ProgramExpr α β)) : ProgramExpr α β
+  | apply (fn : String) (args : List String) : ProgramExpr α β
   | ifThenElse (cond thenBranch elseBranch : ProgramExpr α β) : ProgramExpr α β
   deriving Repr
+
+/-- String representation for ProgramExpr. -/
+def ProgramExpr.toString {α β : Type u} [Object α] [Object β] : ProgramExpr α β → String
+  | .input idx => s!"input({idx})"
+  | .const val => s!"const({repr val})"
+  | .apply fn args => s!"{fn}({String.intercalate ", " args})"
+  | .ifThenElse c t e => s!"if({toString c})then({toString t})else({toString e})"
+
+instance (α β : Type u) [Object α] [Object β] : ToString (ProgramExpr α β) where
+  toString p := ProgramExpr.toString p
 
 instance (α β : Type u) [Object α] [Object β] : Object (ProgramExpr α β) where
   theory := programTheoryName
@@ -94,10 +103,10 @@ def idProgram (α : Type u) [Object α] : ProgramExpr α α :=
 def constProgram (α β : Type u) [Object α] [Object β] (b : β) : ProgramExpr α β :=
   .const b
 
-/-- Composition of two programs. -/
+/-- Composition of two programs (nominal representation). -/
 def composePrograms {α β γ : Type u} [Object α] [Object β] [Object γ]
     (p : ProgramExpr β γ) (q : ProgramExpr α β) : ProgramExpr α γ :=
-  .apply "compose" [p, q]
+  .apply "compose" [toString p, toString q]
 
 /-! ## Finite Automaton
 
@@ -108,16 +117,15 @@ structure DFA (alphabet : Type u) [Object alphabet] where
   states : Type u
   [statesObj : Object states]
   initialState : states
-  acceptStates : Set states
+  acceptStates : List states
   transition : states → alphabet → states
-  deriving Repr
 
 instance (alphabet : Type u) [Object alphabet] (d : DFA alphabet) : Object d.states := d.statesObj
 
 /-- A DFA that accepts strings ending with 'a'. -/
 inductive TwoState where
   | q0 | q1
-  deriving BEq, Repr
+  deriving BEq, Repr, DecidableEq
 
 instance : Object TwoState where
   theory := automatonTheoryName
@@ -129,7 +137,7 @@ instance : Object TwoState where
 def endsWithA_DFA : DFA Char where
   states := TwoState
   initialState := .q0
-  acceptStates := { .q1 }
+  acceptStates := [.q1]
   transition s c :=
     match s, c with
     | .q0, 'a' => .q1
@@ -138,10 +146,10 @@ def endsWithA_DFA : DFA Char where
     | .q1, _ => .q0
 
 /-- Run a DFA on an input string and return whether it accepts. -/
-def DFArun {alphabet : Type u} [Object alphabet]
+def DFArun {alphabet : Type u} [Object alphabet] {states : Type u} [BEq states]
     (d : DFA alphabet) (input : List alphabet) : Bool :=
   let finalState := input.foldl d.transition d.initialState
-  d.acceptStates.contains finalState
+  d.acceptStates.any (· == finalState)
 
 /-! ## Turing Machine (Abstract)
 
@@ -156,7 +164,6 @@ structure TuringMachine where
   acceptState : states
   rejectState : states
   transition : states → alphabet → states × alphabet × (Option alphabet)  -- state, write, move
-  deriving Repr
 
 instance (tm : TuringMachine) : Object tm.states := tm.statesObj
 instance (tm : TuringMachine) : Object tm.alphabet := tm.alphaObj
@@ -193,6 +200,14 @@ inductive SpaceComplexity where
   | exponential
   deriving BEq, Repr, Inhabited
 
+instance : ToString SpaceComplexity where
+  toString
+    | .constant => "O(1)"
+    | .logarithmic => "O(log n)"
+    | .linear => "O(n)"
+    | .polynomial d => s!"O(n^{d})"
+    | .exponential => "O(2ⁿ)"
+
 /-- Complexity class: an invariant of a computational object
     that describes its resource requirements. -/
 structure ComplexityClass where
@@ -223,6 +238,12 @@ inductive LambdaTerm where
   | lam (body : LambdaTerm)
   | app (fn arg : LambdaTerm)
   deriving Repr
+
+instance : ToString LambdaTerm where
+  toString
+    | .var n => s!"x{n}"
+    | .lam b => s!"λ.{toString b}"
+    | .app f a => s!"({toString f} {toString a})"
 
 instance : Object LambdaTerm where
   theory := typeTheoryName

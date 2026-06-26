@@ -9,6 +9,8 @@ import MiniTheoryDependencyKernel.Core.Basic
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Theory Signature
 
 A signature specifies the non-logical symbols of a formal theory:
@@ -127,18 +129,18 @@ def TheoryExtension.isConservative (ext : TheoryExtension) : Bool :=
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let sig : Signature := { constants := [], functions := [("+", 2), ("*", 2)], relations := [("=", 2)] }
   sig.size
 
-#eval do
+#eval
   let t := FormalTheory.simple (TheoryName.ofString "GroupTheory")
   t.addAxiom { name := "assoc", statement := "∀ x y z, (x*y)*z = x*(y*z)" }
   |>.addAxiom { name := "identity", statement := "∃ e, ∀ x, e*x = x ∧ x*e = x" }
   |>.addAxiom { name := "inverse", statement := "∀ x, ∃ y, x*y = e ∧ y*x = e" }
   |>.axioms.length
 
-#eval do
+#eval
   let orig := FormalTheory.simple (TheoryName.ofString "SemiGroup")
             |>.addAxiom { name := "assoc", statement := "∀ x y z, (x*y)*z = x*(y*z)" }
   let extd := orig.addAxiom { name := "comm", statement := "∀ x y, x*y = y*x" }

@@ -15,6 +15,8 @@ import MiniTheoryDependencyKernel.Core.Objects
 
 namespace MiniTheoryDependencyKernel
 
+open MiniObjectKernel
+
 /-! ## Universal Property: Product Graph Size
 
 The product graph G₁ × G₂ has nodeCount = |G₁.nodes| × |G₂.nodes|.
@@ -149,30 +151,30 @@ lemma rename_preserves_edgeCount (g : DependencyGraph) (renaming : List (TheoryN
 
 /-! ## Evaluations -/
 
-#eval do
+#eval
   let g : DependencyGraph :=
     { nodes := [ TheoryNode.simple (TheoryName.ofString "A") "A" "1" ""
                , TheoryNode.simple (TheoryName.ofString "B") "B" "1" "" ]
     , edges := [] }
   (g.buildOrder, g.nodeCount)
 
-#eval do
+#eval
   let sig : Signature := { constants := [""], functions := [("+", 2)], relations := [] }
   (free_theory_axioms_empty sig (TheoryName.ofString "Free"))
   sig.isSubsig sig
 
-#eval do
+#eval
   let g : DependencyGraph := DependencyGraph.empty
     |>.addNode (TheoryNode.simple (TheoryName.ofString "Base") "" "" "")
     |>.addNode (TheoryNode.simple (TheoryName.ofString "Mid") "" "" "")
   (g.topologicalOrder, g.isAcyclic)
 
-#eval do
+#eval
   let n := TheoryNode.simple (TheoryName.ofString "Single") "S" "1" "s"
   let g := DependencyGraph.empty.addNode n
   (singleton_topological_order n, g.buildOrder, g.nodeCount)
 
-#eval do
+#eval
   let a := TheoryName.ofString "A"
   let g : DependencyGraph :=
     { nodes := [TheoryNode.simple a "A" "1" ""]

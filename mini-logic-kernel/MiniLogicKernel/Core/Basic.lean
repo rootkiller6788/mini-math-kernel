@@ -9,6 +9,58 @@ Knowledge coverage: L1 (Definitions), L2 (Core Concepts)
 
 namespace MiniLogicKernel
 
+/-! ## Set Type (local definition; not in core Lean 4.7.0)
+
+Core Lean 4.7.0 does not include  from . We define a minimal
+replacement as  with , , and other instances.
+-/
+
+def Set (α : Type) : Type := α → Prop
+
+instance {α : Type} : Membership α (Set α) := ⟨λ a s => s a⟩
+
+instance {α : Type} : HasSubset (Set α) := ⟨λ s t => ∀ x, x ∈ s → x ∈ t⟩
+
+/-- Universal set (all elements). -/
+def Set.univ {α : Type} : Set α := λ _ => True
+
+/-- Empty set. -/
+def Set.empty {α : Type} : Set α := λ _ => False
+
+instance {α : Type} : EmptyCollection (Set α) := ⟨Set.empty⟩
+
+/-- Set intersection. -/
+def Set.inter {α : Type} (s t : Set α) : Set α := λ x => x ∈ s ∧ x ∈ t
+
+instance {α : Type} : Inter (Set α) := ⟨Set.inter⟩
+
+/-- Set union. -/
+def Set.union {α : Type} (s t : Set α) : Set α := λ x => x ∈ s ∨ x ∈ t
+
+instance {α : Type} : Union (Set α) := ⟨Set.union⟩
+
+/-- Set complement. Use `Set.compl s` explicitly since `HasCompl` is not in core Lean 4. -/
+def Set.compl {α : Type} (s : Set α) : Set α := λ x => ¬ (x ∈ s)
+
+/-- Singleton set {x}. -/
+def Set.singleton {α : Type} (a : α) : Set α := λ x => x = a
+
+instance {α : Type} : Singleton α (Set α) := ⟨Set.singleton⟩
+
+/-- Insert an element into a set: {x} ∪ s. -/
+def Set.insert {α : Type} (a : α) (s : Set α) : Set α := λ x => x = a ∨ x ∈ s
+
+instance {α : Type} : Insert α (Set α) := ⟨Set.insert⟩
+
+/-- A set is finite if there is a list containing exactly its elements. -/
+def Set.Finite {α : Type} (s : Set α) : Prop :=
+  ∃ (l : List α), ∀ x, x ∈ s ↔ x ∈ l
+
+/-- Extensionality for sets: two sets are equal iff they have the same elements. -/
+@[ext]
+theorem Set.ext {α : Type} {s t : Set α} (h : ∀ x, x ∈ s ↔ x ∈ t) : s = t := by
+  funext x; apply propext; exact h x
+
 /-! ## Formula Type -/
 
 inductive Formula : Type where
@@ -22,16 +74,18 @@ inductive Formula : Type where
   | equiv : Formula → Formula → Formula
   deriving BEq, DecidableEq, Repr, Inhabited
 
+def Formula.toStringAux : Formula → String
+  | .atom n => "P" ++ ToString.toString n
+  | .true => "⊤"
+  | .false => "⊥"
+  | .not A => "¬(" ++ Formula.toStringAux A ++ ")"
+  | .and A B => "(" ++ Formula.toStringAux A ++ " ∧ " ++ Formula.toStringAux B ++ ")"
+  | .or A B => "(" ++ Formula.toStringAux A ++ " ∨ " ++ Formula.toStringAux B ++ ")"
+  | .impl A B => "(" ++ Formula.toStringAux A ++ " → " ++ Formula.toStringAux B ++ ")"
+  | .equiv A B => "(" ++ Formula.toStringAux A ++ " ↔ " ++ Formula.toStringAux B ++ ")"
+
 instance : ToString Formula where
-  toString
-    | .atom n => s!"P{n}"
-    | .true => "⊤"
-    | .false => "⊥"
-    | .not A => s!"¬({A})"
-    | .and A B => s!"({A} ∧ {B})"
-    | .or A B => s!"({A} ∨ {B})"
-    | .impl A B => s!"({A} → {B})"
-    | .equiv A B => s!"({A} ↔ {B})"
+  toString := Formula.toStringAux
 
 instance : Neg Formula where
   neg := Formula.not
@@ -47,8 +101,8 @@ instance : OrOp Formula where
 def Formula.eval (f : Formula) (assignment : Nat → Bool) : Bool :=
   match f with
   | .atom n => assignment n
-  | .true => true
-  | .false => false
+  | .true => Bool.true
+  | .false => Bool.false
   | .not A => !(eval A assignment)
   | .and A B => eval A assignment && eval B assignment
   | .or A B => eval A assignment || eval B assignment
@@ -114,7 +168,7 @@ def Formula.maxAtom : Formula → Nat
 
 /-! ## Basic Transformations -/
 
-def Formula.pushNeg : Formula → Formula
+partial def Formula.pushNeg : Formula → Formula
   | .atom n => .atom n
   | .true => .true
   | .false => .false
@@ -266,64 +320,81 @@ def decideTautology (f : Formula) : Bool :=
 
 /-! ## Evaluation Depends Only on Atoms -/
 
+/-- Every atom in a formula is bounded by maxAtom. -/
 theorem Formula.atom_le_maxAtom (f : Formula) : ∀ n ∈ f.atoms, n ≤ f.maxAtom := by
   induction f with
-  | atom m => simp [atoms, maxAtom]
-  | true => simp [atoms]
-  | false => simp [atoms]
-  | not A ih => simp [atoms, maxAtom]; exact ih
+  | atom m => simp [Formula.atoms, Formula.maxAtom]
+  | true => simp [Formula.atoms]
+  | false => simp [Formula.atoms]
+  | not A ih => simp [Formula.atoms, Formula.maxAtom]; exact ih
   | and A B ihA ihB =>
-    simp [atoms, maxAtom]
+    simp [Formula.atoms, Formula.maxAtom]
     intro n hn
-    rcases List.mem_append.mp hn with (hnA | hnB)
+    rcases (mem_append (l₁ := Formula.atoms A) (l₂ := Formula.atoms B)).mp hn with (hnA | hnB)
     · exact Nat.le_trans (ihA n hnA) (Nat.le_max_left _ _)
     · exact Nat.le_trans (ihB n hnB) (Nat.le_max_right _ _)
   | or A B ihA ihB =>
-    simp [atoms, maxAtom]
+    simp [Formula.atoms, Formula.maxAtom]
     intro n hn
-    rcases List.mem_append.mp hn with (hnA | hnB)
+    rcases (mem_append (l₁ := Formula.atoms A) (l₂ := Formula.atoms B)).mp hn with (hnA | hnB)
     · exact Nat.le_trans (ihA n hnA) (Nat.le_max_left _ _)
     · exact Nat.le_trans (ihB n hnB) (Nat.le_max_right _ _)
   | impl A B ihA ihB =>
-    simp [atoms, maxAtom]
+    simp [Formula.atoms, Formula.maxAtom]
     intro n hn
-    rcases List.mem_append.mp hn with (hnA | hnB)
+    rcases (mem_append (l₁ := Formula.atoms A) (l₂ := Formula.atoms B)).mp hn with (hnA | hnB)
     · exact Nat.le_trans (ihA n hnA) (Nat.le_max_left _ _)
     · exact Nat.le_trans (ihB n hnB) (Nat.le_max_right _ _)
   | equiv A B ihA ihB =>
-    simp [atoms, maxAtom]
+    simp [Formula.atoms, Formula.maxAtom]
     intro n hn
-    rcases List.mem_append.mp hn with (hnA | hnB)
+    rcases (mem_append (l₁ := Formula.atoms A) (l₂ := Formula.atoms B)).mp hn with (hnA | hnB)
     · exact Nat.le_trans (ihA n hnA) (Nat.le_max_left _ _)
     · exact Nat.le_trans (ihB n hnB) (Nat.le_max_right _ _)
 
+/-- Evaluation of a formula depends only on the truth values of its atoms. -/
 theorem Formula.eval_depends_only_on_atoms (f : Formula) (a b : Nat → Bool)
     (h : ∀ n, n ∈ f.atoms → a n = b n) : f.eval a = f.eval b := by
   induction f with
-  | atom n => simp [eval, atoms]; exact h n (by simp)
+  | atom n =>
+    simp [Formula.eval]
+    exact h n (by simp [Formula.atoms])
   | true => rfl
   | false => rfl
-  | not A ih => simp [eval, atoms]; apply ih; intro n hn; apply h n; simpa using hn
+  | not A ih =>
+    simp [Formula.eval]
+    rw [ih]
+    intro n hn
+    apply h n
+    simp [Formula.atoms, hn]
   | and A B ihA ihB =>
-    simp [eval, atoms]
-    have hA : ∀ n, n ∈ A.atoms → a n = b n := λ n hn => h n (List.mem_append_left _ hn)
-    have hB : ∀ n, n ∈ B.atoms → a n = b n := λ n hn => h n (List.mem_append_right _ hn)
-    rw [ihA a b hA, ihB a b hB]
+    simp [Formula.eval]
+    have hA : ∀ n, n ∈ A.atoms → a n = b n := λ n hn =>
+      h n (mem_append_left (l₁ := Formula.atoms A) (l₂ := Formula.atoms B) hn)
+    have hB : ∀ n, n ∈ B.atoms → a n = b n := λ n hn =>
+      h n (mem_append_right (l₁ := Formula.atoms A) (l₂ := Formula.atoms B) hn)
+    rw [ihA hA, ihB hB]
   | or A B ihA ihB =>
-    simp [eval, atoms]
-    have hA : ∀ n, n ∈ A.atoms → a n = b n := λ n hn => h n (List.mem_append_left _ hn)
-    have hB : ∀ n, n ∈ B.atoms → a n = b n := λ n hn => h n (List.mem_append_right _ hn)
-    rw [ihA a b hA, ihB a b hB]
+    simp [Formula.eval]
+    have hA : ∀ n, n ∈ A.atoms → a n = b n := λ n hn =>
+      h n (mem_append_left (l₁ := Formula.atoms A) (l₂ := Formula.atoms B) hn)
+    have hB : ∀ n, n ∈ B.atoms → a n = b n := λ n hn =>
+      h n (mem_append_right (l₁ := Formula.atoms A) (l₂ := Formula.atoms B) hn)
+    rw [ihA hA, ihB hB]
   | impl A B ihA ihB =>
-    simp [eval, atoms]
-    have hA : ∀ n, n ∈ A.atoms → a n = b n := λ n hn => h n (List.mem_append_left _ hn)
-    have hB : ∀ n, n ∈ B.atoms → a n = b n := λ n hn => h n (List.mem_append_right _ hn)
-    rw [ihA a b hA, ihB a b hB]
+    simp [Formula.eval]
+    have hA : ∀ n, n ∈ A.atoms → a n = b n := λ n hn =>
+      h n (mem_append_left (l₁ := Formula.atoms A) (l₂ := Formula.atoms B) hn)
+    have hB : ∀ n, n ∈ B.atoms → a n = b n := λ n hn =>
+      h n (mem_append_right (l₁ := Formula.atoms A) (l₂ := Formula.atoms B) hn)
+    rw [ihA hA, ihB hB]
   | equiv A B ihA ihB =>
-    simp [eval, atoms]
-    have hA : ∀ n, n ∈ A.atoms → a n = b n := λ n hn => h n (List.mem_append_left _ hn)
-    have hB : ∀ n, n ∈ B.atoms → a n = b n := λ n hn => h n (List.mem_append_right _ hn)
-    rw [ihA a b hA, ihB a b hB]
+    simp [Formula.eval]
+    have hA : ∀ n, n ∈ A.atoms → a n = b n := λ n hn =>
+      h n (mem_append_left (l₁ := Formula.atoms A) (l₂ := Formula.atoms B) hn)
+    have hB : ∀ n, n ∈ B.atoms → a n = b n := λ n hn =>
+      h n (mem_append_right (l₁ := Formula.atoms A) (l₂ := Formula.atoms B) hn)
+    rw [ihA hA, ihB hB]
 
 /-! ## Subformula Induction Principle -/
 
@@ -406,8 +477,8 @@ theorem logEquiv_iff_equiv_taut (A B : Formula) : logEquiv A B ↔ isTautology (
   · intro h a; simp [Formula.eval, h a]
   · intro h a
     have h' := h a
-    simp [Formula.eval] at h'
-    exact Bool.eq_of_beq_eq_true h'
+    simp [isTautology, Formula.eval] at h' ⊢
+    exact h'
 
 theorem not_logEquiv_not {A B : Formula} (h : logEquiv A B) : logEquiv (.not A) (.not B) := by
   intro a; simp [Formula.eval, h a]
@@ -433,17 +504,34 @@ instance Formula.setoid : Setoid Formula where
 /-! ## Equivalence Class Operations -/
 
 def EquivClass (A : Formula) : Set Formula :=
-  {B | logEquiv A B}
+  λ B => logEquiv A B
 
 theorem EquivClass.mem_self (A : Formula) : A ∈ EquivClass A :=
   logEquiv_refl A
 
 theorem EquivClass.ext {A B : Formula} (h : logEquiv A B) : EquivClass A = EquivClass B := by
-  ext C; constructor
+  funext C
+  dsimp [EquivClass]
+  apply propext
+  constructor
   · intro hAC; exact logEquiv_trans (logEquiv_symm h) hAC
   · intro hBC; exact logEquiv_trans h hBC
 
 /-! ## List Utility Functions -/
+
+/-- Membership in an appended list decomposes into left/right membership. -/
+theorem mem_append {α : Type} {a : α} {l₁ l₂ : List α} : a ∈ l₁ ++ l₂ ↔ a ∈ l₁ ∨ a ∈ l₂ := by
+  induction l₁ with
+  | nil => simp
+  | cons x xs ih => simp [ih, or_assoc]
+
+/-- If a ∈ l then a ∈ l ++ l'. -/
+theorem mem_append_left {α : Type} {a : α} {l₁ l₂ : List α} (h : a ∈ l₁) : a ∈ l₁ ++ l₂ :=
+  (mem_append.mpr (Or.inl h))
+
+/-- If a ∈ l' then a ∈ l ++ l'. -/
+theorem mem_append_right {α : Type} {a : α} {l₁ l₂ : List α} (h : a ∈ l₂) : a ∈ l₁ ++ l₂ :=
+  (mem_append.mpr (Or.inr h))
 
 /-- Check if all elements of a list satisfy a predicate. -/
 def listAll {α : Type} (l : List α) (p : α → Bool) : Bool :=
@@ -522,105 +610,150 @@ def semanticallyImplies (Γ : Set Formula) (f : Formula) : Prop :=
 def encodeAssign (k : Nat) (a : Nat → Bool) : Nat :=
   (List.range k).foldl (λ acc j => if a j then acc + 2 ^ j else acc) 0
 
-theorem encodeAssign_lt (k : Nat) (a : Nat → Bool) : encodeAssign k a < 2 ^ k := by
+/-- Recursive unfolding of encodeAssign. -/
+private lemma encodeAssign_succ (k : Nat) (a : Nat ? Bool) :
+    encodeAssign (k+1) a = encodeAssign k a + (if a k then 2 ^ k else 0) := by
+  simp [encodeAssign, List.range_succ, List.foldl_append]
+
+/-- (x + d*q) / d = x/d + q when d > 0 (no carry from remainder). -/
+private lemma div_add_mul_of_pos {x d q : Nat} (hd : 0 < d) : (x + d * q) / d = x / d + q := by
+  have hx := Nat.div_add_mod x d
+  have hsum : x + d * q = (x / d + q) * d + x % d := by
+    rw [hx]
+    ring
+  have hmod_lt : x % d < d := Nat.mod_lt x hd
+  have h_lower : (x / d + q) * d ? x + d * q := by
+    rw [hsum]
+    exact Nat.le_add_right _ _
+  have h_upper : x + d * q < (x / d + q + 1) * d := by
+    rw [hsum]
+    have hlt : (x / d + q) * d + x % d < (x / d + q) * d + d :=
+      Nat.add_lt_add_left hmod_lt _
+    calc
+      (x / d + q) * d + x % d < (x / d + q) * d + d := hlt
+      _ = (x / d + q + 1) * d := by ring
+  have h_lower' : d * (x / d + q) ? x + d * q := by
+    rw [Nat.mul_comm]; exact h_lower
+  have h_upper' : x + d * q < d * (x / d + q + 1) := by
+    rw [Nat.mul_comm]; exact h_upper
+  exact Nat.div_eq_of_lt_le h_upper' h_lower'
+
+theorem encodeAssign_lt (k : Nat) (a : Nat ? Bool) : encodeAssign k a < 2 ^ k := by
   induction k with
-  | zero => simp [encodeAssign]
+  | zero =>
+    simp [encodeAssign]
   | succ k ih =>
-    simp [encodeAssign, List.range_succ, List.foldl_append]
-    split
-    · have h_sum : encodeAssign k a + 2 ^ k < 2 ^ k + 2 ^ k :=
+    rw [encodeAssign_succ k a]
+    by_cases hk : a k
+    ? simp [hk]
+      have h_sum : encodeAssign k a + 2 ^ k < 2 ^ k + 2 ^ k :=
         Nat.add_lt_add_right ih (2 ^ k)
-      omega
-    · have h_lt : encodeAssign k a < 2 ^ k := ih
-      have h_pow_lt : 2 ^ k < 2 ^ (k + 1) := by
-        simp [Nat.pow_succ]; omega
-      omega
+      have h_eq : 2 ^ k + 2 ^ k = 2 ^ (k + 1) := by
+        simp [Nat.pow_succ, Nat.two_mul]
+      exact Nat.lt_of_lt_of_eq h_sum h_eq
+    ? simp [hk]
+      have h_le : 2 ^ k ? 2 ^ (k + 1) := by
+        rw [Nat.pow_succ]
+        calc
+          2 ^ k = 2 ^ k * 1 := by simp
+          _ ? 2 ^ k * 2 := Nat.mul_le_mul_left (2 ^ k) (by decide : 1 ? 2)
+      exact Nat.lt_of_lt_of_le ih h_le
 
-theorem decode_encode_eq (k j : Nat) (a : Nat → Bool) (hj : j < k) :
+theorem decode_encode_eq (k j : Nat) (a : Nat ? Bool) (hj : j < k) :
     decodeAssign (encodeAssign k a) j = a j := by
-  unfold decodeAssign encodeAssign
-  induction k generalizing j with
-  | zero => exact absurd hj (Nat.not_lt_zero _)
+  induction k with
+  | zero => exact absurd hj (Nat.not_lt_zero j)
   | succ k ih =>
-    simp [List.range_succ, List.foldl_append]
-    let x := (List.range k).foldl (λ acc n => if a n then acc + 2 ^ n else acc) 0
-    have hx_lt : x < 2 ^ k := encodeAssign_lt k a
-    rcases Nat.lt_or_eq_of_le (Nat.le_of_lt_succ hj) with (hj_lt | rfl)
-    · by_cases hak : a k
-      · simp [hak]
-        have hdvd : 2 ^ j ∣ 2 ^ k := Nat.pow_dvd_pow (2 : Nat) (Nat.le_of_lt hj_lt)
-        have h_div : (x + 2 ^ k) / 2 ^ j = x / 2 ^ j + 2 ^ k / 2 ^ j := by
-          calc
-            (x + 2 ^ k) / 2 ^ j = (2 ^ k + x) / 2 ^ j := by rw [Nat.add_comm]
-            _ = 2 ^ k / 2 ^ j + x / 2 ^ j := Nat.add_div_of_dvd hdvd
-            _ = x / 2 ^ j + 2 ^ k / 2 ^ j := by rw [Nat.add_comm]
-        have h_pow_div : 2 ^ k / 2 ^ j = 2 ^ (k - j) := by
-          have h_eq : 2 ^ k = 2 ^ j * 2 ^ (k - j) := by
-            rw [← Nat.pow_add, Nat.sub_add_cancel (Nat.le_of_lt hj_lt)]
-          rw [h_eq]; exact Nat.mul_div_cancel_left _ (Nat.pow_pos (by norm_num) j)
-        have h_mod : (2 ^ k / 2 ^ j) % 2 = 0 := by
-          rw [h_pow_div]
-          induction (k - j) with
-          | zero => simp
-          | succ n ih' => simp [Nat.pow_succ, mul_two]
-        rw [h_div, h_mod, add_zero]
-        exact ih j hj_lt
-      · simp [hak]; exact ih j hj_lt
-    · have h_div : x / 2 ^ k = 0 := Nat.div_eq_of_lt hx_lt
-      by_cases hak : a k
-      · simp [hak, h_div]
-      · simp [hak, h_div]
+    rw [encodeAssign_succ k a]
+    unfold decodeAssign
+    by_cases hak : a k
+    ? simp [hak]
+      rcases Nat.lt_or_eq_of_le (Nat.le_of_lt_succ hj) with (h_lt | h_eq)
+      ? have h_enc_lt : encodeAssign k a < 2 ^ k := encodeAssign_lt k a
+        have h_dvd : (2 ^ j) ? (2 ^ k) := Nat.pow_dvd_pow 2 (Nat.le_of_lt h_lt)
+        rcases h_dvd with ?m, hm?
+        have hpos : 0 < 2 ^ j := Nat.pos_pow_of_pos _ (by decide : 0 < 2)
+        have h_div_sum : (encodeAssign k a + (2 ^ j) * m) / (2 ^ j) =
+            encodeAssign k a / (2 ^ j) + m :=
+          div_add_mul_of_pos hpos
+        rw [hm, h_div_sum]
+        have hm_even : m % 2 = 0 := by
+          have h_dvd2 : (2 ^ (j + 1)) ? (2 ^ k) :=
+            Nat.pow_dvd_pow 2 (Nat.succ_le_of_lt h_lt)
+          rw [hm] at h_dvd2
+          rw [Nat.pow_succ] at h_dvd2
+          have h_dvd_m : 2 ? m :=
+            Nat.dvd_of_mul_dvd_mul_left hpos h_dvd2
+          exact Nat.mod_eq_zero_of_dvd h_dvd_m
+        rw [Nat.add_mod, hm_even, add_zero]
+        exact ih j h_lt
+      ? subst h_eq
+        have h_enc_lt : encodeAssign k a < 2 ^ k := encodeAssign_lt k a
+        have hpos : 0 < 2 ^ k := Nat.pos_pow_of_pos _ (by decide : 0 < 2)
+        have h_div_sum : (encodeAssign k a + (2 ^ k) * 1) / (2 ^ k) =
+            encodeAssign k a / (2 ^ k) + 1 :=
+          div_add_mul_of_pos hpos
+        have h_div_enc : encodeAssign k a / (2 ^ k) = 0 := Nat.div_eq_of_lt h_enc_lt
+        have h_result : (encodeAssign k a + 2 ^ k) / (2 ^ k) = 1 := by
+          simpa [h_div_enc] using h_div_sum
+        simp [h_result]
+    ? simp [hak]
+      rcases Nat.lt_or_eq_of_le (Nat.le_of_lt_succ hj) with (h_lt | h_eq)
+      ? exact ih j h_lt
+      ? subst h_eq
+        have h_enc_lt : encodeAssign k a < 2 ^ k := encodeAssign_lt k a
+        have h_div : encodeAssign k a / (2 ^ k) = 0 := Nat.div_eq_of_lt h_enc_lt
+        simp [h_div]
 
-theorem decideTautology_sound (f : Formula) : decideTautology f = true → isTautology f := by
-  intro h a
-  unfold decideTautology at h
-  have hall_true : ∀ x ∈ allAssignmentsNat (f.maxAtom + 1), f.eval x = true := by
-    have hlist := List.all_eq_true.mp h
-    intro x hx
-    have hx' := hlist x hx
-    cases f.eval x with
-    | true => rfl
-    | false => simp at hx'
-  let a_restricted : Nat → Bool := λ n => if n < f.maxAtom + 1 then a n else false
-  have h_agree : ∀ n, n ∈ f.atoms → a n = a_restricted n := by
-    intro n hn
-    have hnle : n ≤ f.maxAtom := Formula.atom_le_maxAtom f n hn
-    simp [a_restricted, Nat.lt_succ_of_le hnle]
-  let i := encodeAssign (f.maxAtom + 1) a_restricted
-  have h_decode : a_restricted = decodeAssign i := by
-    funext n
-    by_cases hnlt : n < f.maxAtom + 1
-    · rw [decode_encode_eq (f.maxAtom + 1) n a_restricted hnlt]
-      simp [a_restricted, hnlt]
-    · simp [a_restricted, decodeAssign, encodeAssign, hnlt]
-  have hi_mem : decodeAssign i ∈ allAssignmentsNat (f.maxAtom + 1) := by
+theorem decideTautology_sound (f : Formula) : decideTautology f = true ? isTautology f := by
+  intro h_chk ?
+  unfold decideTautology at h_chk
+  let k := f.maxAtom + 1
+  have h_all_mem : ? (l : List (Nat ? Bool)) (p : (Nat ? Bool) ? Bool) (a : Nat ? Bool),
+      l.all p = true ? a ? l ? p a = true := by
+    intro l p a hall hmem
+    induction l with
+    | nil => simp at hmem
+    | cons x xs ih =>
+      simp at hmem ?
+      rcases hmem with (rfl | hmem')
+      ? simp at hall
+        cases hp : p x
+        ? simp [hp] at hall
+        ? rfl
+      ? simp at hall
+        cases hp : p x
+        ? simp [hp] at hall
+        ? exact ih hall hmem'
+  let i := encodeAssign k ?
+  have hi_lt : i < 2 ^ k := encodeAssign_lt k ?
+  have hi_mem : decodeAssign i ? allAssignmentsNat k := by
     unfold allAssignmentsNat
-    apply List.mem_map.mpr
-    refine ⟨i, ?_, rfl⟩
-    have hi_lt : i < 2 ^ (f.maxAtom + 1) := encodeAssign_lt _ _
-    have mem_range_lemma (a n : Nat) (h : a < n) : a ∈ List.range n := by
-      induction' n with k ih
-      · exact absurd h (Nat.not_lt_zero _)
-      · rw [List.range_succ]
-        rcases Nat.lt_or_eq_of_le (Nat.le_of_lt_succ h) with (hl | heq)
-        · apply List.mem_append_of_mem_left; exact ih hl
-        · apply List.mem_append_of_mem_right
-          subst heq; exact List.mem_singleton_self _
-    exact mem_range_lemma i (2 ^ (f.maxAtom + 1)) hi_lt
-  calc
-    f.eval a = f.eval a_restricted :=
-      Formula.eval_depends_only_on_atoms f a a_restricted h_agree
-    _ = f.eval (decodeAssign i) := by rw [h_decode]
-    _ = true := hall_true (decodeAssign i) hi_mem
+    simp [hi_lt]
+  have h_eval_true : (f.eval (decodeAssign i) == true) = true :=
+    h_all_mem (allAssignmentsNat k) (? a => f.eval a == true) (decodeAssign i) h_chk hi_mem
+  have h_val : f.eval (decodeAssign i) = true := by
+    simpa using h_eval_true
+  have h_eval_eq : f.eval ? = f.eval (decodeAssign i) := by
+    apply Formula.eval_depends_only_on_atoms f ? (decodeAssign i)
+    intro n hn
+    have hn_le : n ? f.maxAtom := Formula.atom_le_maxAtom f n hn
+    have hn_lt_k : n < k := by
+      exact Nat.lt_succ_of_le hn_le
+    rw [decode_encode_eq k n ? hn_lt_k]
+    rfl
+  rw [h_eval_eq, h_val]
 
-theorem decideTautology_complete (f : Formula) : isTautology f → decideTautology f = true := by
-  intro htaut
+theorem decideTautology_complete (f : Formula) : isTautology f ? decideTautology f = true := by
+  intro h_taut
   unfold decideTautology
-  apply List.all_eq_true.mpr
-  intro a ha
-  have htrue := htaut a
-  simp [htrue]
-
+  have h_val : ? (a : Nat ? Bool), f.eval a == true := by
+    intro a
+    have h := h_taut a
+    simp [h]
+  induction' (allAssignmentsNat (f.maxAtom + 1)) with x xs ih
+  ? rfl
+  ? simp [h_val x, ih]
 /-! ## #eval Examples -/
 
 def testBasicFormula1 : Formula := .impl (.and (.atom 0) (.atom 1)) (.or (.atom 0) (.atom 2))

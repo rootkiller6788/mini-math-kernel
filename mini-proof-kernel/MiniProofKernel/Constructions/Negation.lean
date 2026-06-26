@@ -15,7 +15,7 @@ namespace MiniProofKernel
 
 /-! ## Negation as Implication of False -/
 
-/-- The canonical interpretation: ¬A is equivalent to A → ⊥.
+/- The canonical interpretation: ¬A is equivalent to A → ⊥.
 We show both directions of the equivalence. -/
 
 /-- From ¬A (as primitive `.not A`) to A → ⊥. -/
@@ -70,12 +70,12 @@ def doubleNegIntroProp {Γ : Context} {A : Formula}
 def tripleNegReduction {Γ : Context} {A : Formula}
     : ProofTree Γ (.impl (.not (.not (.not A))) (.not A)) :=
   .implI (.notI (.notE (.hyp (.tail _ (.head _)))
-    (doubleNegIntroProp.weakenCons.weakenCons)))
+    (.implE (doubleNegIntroProp.weakenCons.weakenCons) (.hyp (.head _)))))
 
 /-- Double-negation elimination: ¬¬A → A (classically valid, uses LEM). -/
 def doubleNegElimProp {Γ : Context} {A : Formula}
     : ProofTree Γ (.impl (.not (.not A)) A) :=
-  .implI (.orE (.lem (a:=A))
+  .implI (.orE (.lem (A:=A))
     (.hyp (.head _))
     (.falseE (.notE (.hyp (.tail _ (.head _))) (.hyp (.head _)))))
 
@@ -92,8 +92,8 @@ def deMorganOrL {Γ : Context} {A B : Formula}
 def deMorganAndL {Γ : Context} {A B : Formula}
     : ProofTree Γ (.impl (.or (.not A) (.not B)) (.not (.and A B))) :=
   .implI (.notI (.orE (.hyp (.tail _ (.head _)))
-    (.notE (.hyp (.head _)) (.andEl (.hyp (.head _))))
-    (.notE (.hyp (.head _)) (.andEr (.hyp (.head _))))))
+    (.notE (.hyp (.head _)) (.andEl (.hyp (.tail _ (.head _)))))
+    (.notE (.hyp (.head _)) (.andEr (.hyp (.tail _ (.head _)))))))
 
 /-- The other De Morgan direction requires classical logic (LEM):
 ¬(¬A ∧ ¬B) → (A ∨ B). -/
@@ -127,4 +127,3 @@ def negEFQ : ProofTree [] (.impl .false negA) := .implI (.falseE (.hyp (.head _)
 #eval nonContradiction.size
 #eval tripleNegReduction.size
 
-end MiniProofKernel

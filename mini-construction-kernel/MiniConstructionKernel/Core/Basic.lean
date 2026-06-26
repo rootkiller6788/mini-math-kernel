@@ -2,7 +2,10 @@
 # Constructions Kernel: Basic Constructions
 
 Defines the `Construction` type — the common interface for building
-new mathematical objects from existing ones.
+new mathematical objects from existing ones. Provides canonical
+algebraic structures (monoid, group, ring, module, lattice).
+
+References: Mac Lane, Categories for the Working Mathematician
 -/
 
 import MiniObjectKernel.Core.Basic
@@ -12,147 +15,104 @@ namespace MiniConstructionKernel
 open MiniObjectKernel
 
 /-! ## Shared Object Instances -/
--- All Object instances used across the module are centralized here
--- to avoid duplicate instance errors during compilation.
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
+-- Reuse Object instances from MiniObjectKernel.Core.Basic for Nat, String, Bool, Empty, Unit.
+-- Additional instances:
 
 instance : Object Int where
   theory := TheoryName.ofString "Set"
   objName := "Int"
   repr n := toString n
 
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
-instance : Object Unit where
-  theory := TheoryName.ofString "Set"
-  objName := "Unit"
-  repr _ := "()"
-
-instance : Object Empty where
-  theory := TheoryName.ofString "Set"
-  objName := "Empty"
-  repr e := nomatch e
-
-instance (α : Type u) [Object α] : Object (Option α) where
+instance (α : Type) [Object α] : Object (Option α) where
   theory := TheoryName.ofString "Set"
   objName := s!"Option({Object.objName α})"
   repr
     | none => "none"
-    | some a => s!"some({Object.repr α a})"
+    | some a => s!"some({repr a})"
 
-instance (α : Type u) [Object α] : Object (List α) where
-  theory := (Object.theory α).extend "Monoid"
-  objName := s!"FreeMonoid({describe α})"
-  repr l := repr l
+/-! ## Construction Type
 
-structure Construction (ι : Type u) (α : ι → Type v) (β : Type v) where
+A `Construction` packages a built object `β` together with metadata:
+the indexing type `ι`, a family `α : ι → Type` of input types, and a name.
+-/
+
+structure Construction (ι : Type) (α : ι → Type) (β : Type) where
   build : β
   [obj : Object β]
   name : String
 
-structure ProductConstruction (ι : Type u) (α : ι → Type v) where
-  carrier : Type v
+/-! ## Product and Coproduct Constructions
+
+`ProductConstruction` represents an I-indexed product with projections.
+`CoproductConstruction` is the dual with injections.
+-/
+
+structure ProductConstruction (ι : Type) (α : ι → Type) where
+  carrier : Type
   [obj : Object carrier]
   proj : (i : ι) → carrier → α i
   name : String
 
-def ProductConstruction.binary (α β : Type u) [Object α] [Object β] : Type :=
+def ProductConstruction.binary (α β : Type) [Object α] [Object β] : Type :=
   ProductConstruction (Fin 2) fun
     | 0 => α
     | 1 => β
 
-structure CoproductConstruction (ι : Type u) (α : ι → Type v) where
-  carrier : Type v
+structure CoproductConstruction (ι : Type) (α : ι → Type) where
+  carrier : Type
   [obj : Object carrier]
   inj : (i : ι) → α i → carrier
   name : String
 
-def CoproductConstruction.binary (α β : Type u) [Object α] [Object β] : Type :=
+def CoproductConstruction.binary (α β : Type) [Object α] [Object β] : Type :=
   CoproductConstruction (Fin 2) fun
     | 0 => α
     | 1 => β
 
-structure SubConstruction (α : Type u) [Object α] where
+/-! ## Sub-Object and Quotient Constructions -/
+
+structure SubConstruction (α : Type) [Object α] where
   pred : α → Prop
-  carrier : Type u := { x : α // pred x }
+  carrier : Type := { x : α // pred x }
   [obj : Object carrier]
   inclusion : carrier → α := Subtype.val
   name : String
 
-structure QuotientConstruction (α : Type u) [Object α] where
+structure QuotientConstruction (α : Type) [Object α] where
   rel : α → α → Prop
   isEquiv : Equivalence rel
-  carrier : Type u := Quot rel
+  carrier : Type := Quot rel
   [obj : Object carrier]
   proj : α → carrier := Quot.mk rel
   name : String
 
-structure FunctionSpaceConstruction (α β : Type u) [Object α] [Object β] where
-  carrier : Type u := α → β
+/-! ## Function Space Construction -/
+
+structure FunctionSpaceConstruction (α β : Type) [Object α] [Object β] where
+  carrier : Type := α → β
   [obj : Object carrier]
   name : String
 
-def compose {α β γ : Type u} [Object α] [Object β] [Object γ]
+/-! ## Composition of Constructions -/
+
+def compose {α β γ : Type} [Object α] [Object β] [Object γ]
     (c2 : Construction Unit (fun _ => β) γ) (c1 : Construction Unit (fun _ => α) β) :
     Construction Unit (fun _ => α) γ :=
   { build := c2.build
     name := s!"{c2.name} ∘ {c1.name}"
   }
 
-/-! ## Construction Functor -/
-
--- A functor on constructions preserving the construction structure
-structure ConstructionFunctor (F : Type u → Type v) [∀ α, Object (F α)] where
-  map : {α : Type u} → [Object α] → α → F α
-  mapConstructions : ∀ {α β : Type u} [Object α] [Object β]
-    (c : Construction Unit (fun _ => α) β),
-    Nonempty (Construction Unit (fun _ => F α) (F β))
-  name : String
-
--- The identity construction functor
-def identityConstructionFunctor : ConstructionFunctor id where
-  map _ _ a := a
-  mapConstructions _ := ⟨{ build := ()
-    name := "IdConstruction"
-  }⟩
-  name := "IdentityConstructionFunctor"
-
 /-! ## Constant Construction -/
 
-def constantConstruction (α : Type u) [Object α] (c : Type v) [Object c] (val : c) :
-    Construction Unit (fun _ => α) c :=
+def constantConstruction (α β : Type) [Object α] [Object β] (val : β) :
+    Construction Unit (fun _ => α) β :=
   { build := val
-    name := s!"Const({describe α}, {describe c})"
+    name := s!"Const({describe α}, {describe β})"
   }
 
-/-! ## Construction over Indexed Families -/
+/-! ## Binary Construction (lifting a binary operation) -/
 
-structure IndexedConstruction (ι : Type u) (α : ι → Type v) (β : ι → Type v) where
-  family : (i : ι) → Construction Unit (fun _ => α i) (β i)
-  name : String
-
-def pointwiseIndexedConstruction {ι : Type u} {α : ι → Type v} {β : ι → Type v}
-    (f : (i : ι) → β i) : IndexedConstruction ι α β :=
-  { family := fun i => { build := f i, name := s!"Ptwise({i})" }
-    name := "Pointwise"
-  }
-
-/-! ## Binary Construction Operations -/
-
--- Lift a binary operation to constructions
-def binaryConstruction {α β γ : Type u} [Object α] [Object β] [Object γ]
+def binaryConstruction {α β γ : Type} [Object α] [Object β] [Object γ]
     (op : α → β → γ) (cα : Construction Unit (fun _ => Unit) α)
     (cβ : Construction Unit (fun _ => Unit) β) :
     Construction Unit (fun _ => Unit) γ :=
@@ -160,56 +120,13 @@ def binaryConstruction {α β γ : Type u} [Object α] [Object β] [Object γ]
     name := s!"Binary({cα.name}, {cβ.name})"
   }
 
-/-! ## Construction Iteration -/
+/-! ## Monoidal Construction (Monoid Object in Set)
 
--- Iterate a construction n times
-def iterateConstruction {α : Type u} [Object α]
-    (c : Construction Unit (fun _ => α) α) : Nat → Construction Unit (fun _ => α) α
-  | 0 => { build := c.build, name := s!"{c.name}⁰" }
-  | n+1 =>
-    let prev := iterateConstruction c n
-    { build := prev.build
-      name := s!"{prev.name}∘{c.name}"
-    }
+A monoid object (Mac Lane VII.3): a set with an associative
+binary operation and a unit element.
+-/
 
-/-! ## Coequalizer as a Construction -/
-
-structure Coequalizer (α β : Type u) (f g : β → α) [Object α] [Object β] where
-  carrier : Type u
-  [obj : Object carrier]
-  proj : α → carrier
-  coequal : ∀ (b : β), proj (f b) = proj (g b)
-  universal : ∀ {X : Type u} [Object X] (h : α → X),
-    (∀ b, h (f b) = h (g b)) → carrier → X
-  universal_proj : ∀ {X : Type u} [Object X] (h : α → X) (hEq : ∀ b, h (f b) = h (g b)) (a : α),
-    universal h hEq (proj a) = h a
-  unique : ∀ {X : Type u} [Object X] (h : α → X) (hEq : ∀ b, h (f b) = h (g b)) (k : carrier → X),
-    (∀ a, k (proj a) = h a) → (∀ c, k c = universal h hEq c)
-  name : String
-
-/-! ## Coequalizer construction example -/
-
-def coequalizerConstruction {α β : Type u} [Object α] [Object β] (f g : β → α) :
-    Coequalizer α β f g :=
-  { carrier := Quot fun a₁ a₂ => ∃ b, f b = a₁ ∧ g b = a₂ ∨ g b = a₁ ∧ f b = a₂
-    proj := Quot.mk _
-    coequal b := Quot.sound ⟨b, Or.inl ⟨rfl, rfl⟩⟩
-    universal h hEq := Quot.lift h fun a₁ a₂ => by
-      rintro ⟨b, (⟨rfl, rfl⟩ | ⟨rfl, rfl⟩)⟩
-      · exact hEq b
-      · symm; exact hEq b
-    universal_proj h hEq a := rfl
-    unique h hEq k hk := by
-      intro c
-      apply Quot.inductionOn c
-      intro a
-      rw [hk a]
-    name := s!"Coeq({describe α}, {describe β})"
-  }
-
-/-! ## Monoidal product of constructions -/
-
-structure MonoidalConstruction (α : Type u) [Object α] where
+structure MonoidalConstruction (α : Type) [Object α] where
   tensor : α → α → α
   unit : α
   assoc : ∀ (a b c : α), tensor (tensor a b) c = tensor a (tensor b c)
@@ -217,9 +134,12 @@ structure MonoidalConstruction (α : Type u) [Object α] where
   right_id : ∀ (a : α), tensor a unit = a
   name : String
 
-/-! ## Group-like construction structure -/
+/-! ## Group-like Construction
 
-structure GroupLikeConstruction (α : Type u) [Object α] where
+Encodes the standard group axioms (Mac Lane I.1).
+-/
+
+structure GroupLikeConstruction (α : Type) [Object α] where
   mul : α → α → α
   inv : α → α
   one : α
@@ -229,9 +149,13 @@ structure GroupLikeConstruction (α : Type u) [Object α] where
   mul_inv_left : ∀ (a : α), mul (inv a) a = one
   name : String
 
-/-! ## Ring-like construction structure -/
+/-! ## Ring-like Construction
 
-structure RingLikeConstruction (α : Type u) [Object α] where
+Encodes the standard ring axioms (associative, commutative addition;
+associative multiplication; distributivity). Reference: standard algebra.
+-/
+
+structure RingLikeConstruction (α : Type) [Object α] where
   add : α → α → α
   mul : α → α → α
   zero : α
@@ -248,9 +172,14 @@ structure RingLikeConstruction (α : Type u) [Object α] where
   right_distrib : ∀ (a b c : α), mul (add a b) c = add (mul a c) (mul b c)
   name : String
 
-/-! ## Module-like construction structure -/
+/-! ## Module-like Construction
 
-structure ModuleLikeConstruction (R α : Type u) [Object R] [Object α] where
+Encodes the standard R-module axioms (additive abelian group with
+scalar multiplication satisfying distributivity and associativity).
+Reference: standard algebra.
+-/
+
+structure ModuleLikeConstruction (R α : Type) [Object R] [Object α] where
   add : α → α → α
   zero : α
   neg : α → α
@@ -260,13 +189,19 @@ structure ModuleLikeConstruction (R α : Type u) [Object R] [Object α] where
   add_zero : ∀ (a : α), add a zero = a
   add_neg : ∀ (a : α), add a (neg a) = zero
   smul_add : ∀ (r : R) (a b : α), smul r (add a b) = add (smul r a) (smul r b)
-  add_smul : ∀ (r s : R) (a : α), smul (r) (smul (s) a) = smul (r) a  -- simplified
+  add_smul : ∀ (r s : R) (a : α), smul (r + s) a = add (smul r a) (smul s a)
+  mul_smul : ∀ (r s : R) (a : α), smul (r * s) a = smul r (smul s a)
+  one_smul : ∀ (a : α), smul 1 a = a
   smul_zero : ∀ (r : R), smul r zero = zero
   name : String
 
-/-! ## Lattice-like construction structure -/
+/-! ## Lattice-like Construction
 
-structure LatticeLikeConstruction (α : Type u) [Object α] where
+Encodes the standard lattice axioms (associative, commutative,
+idempotent meet and join with absorption). Reference: universal algebra.
+-/
+
+structure LatticeLikeConstruction (α : Type) [Object α] where
   meet : α → α → α
   join : α → α → α
   meet_assoc : ∀ (a b c : α), meet (meet a b) c = meet a (meet b c)
@@ -279,37 +214,30 @@ structure LatticeLikeConstruction (α : Type u) [Object α] where
   absorb₂ : ∀ (a b : α), join a (meet a b) = a
   name : String
 
-/-! ## Construction Morphism Type (precursor to Hom) -/
+/-! ## Construction Morphism (Map between constructions) -/
 
-structure ConstructionMap (α β : Type u) [Object α] [Object β] where
+structure ConstructionMap (α β : Type) [Object α] [Object β] where
   map : α → β
-  preservesObject : ∀ (a : α), describe α = describe α ∧ describe β = describe β
   name : String
 
-def identityConstructionMap (α : Type u) [Object α] : ConstructionMap α α :=
+def identityConstructionMap (α : Type) [Object α] : ConstructionMap α α :=
   { map := fun a => a
-    preservesObject a := ⟨rfl, rfl⟩
     name := s!"id({describe α})"
   }
 
-def composeConstructionMap {α β γ : Type u} [Object α] [Object β] [Object γ]
+def composeConstructionMap {α β γ : Type} [Object α] [Object β] [Object γ]
     (g : ConstructionMap β γ) (f : ConstructionMap α β) : ConstructionMap α γ :=
   { map := fun a => g.map (f.map a)
-    preservesObject a := ⟨rfl, rfl⟩
     name := s!"{g.name}∘{f.name}"
   }
 
-/-! ## Congruence relation on a construction -/
+/-! ## Kernel of a Construction Morphism
 
-structure ConstructionCongruence (α : Type u) [Object α] where
-  rel : α → α → Prop
-  isEquiv : Equivalence rel
-  stable : ∀ (f : α → α), (∀ a b, rel a b → rel (f a) (f b))
-  name : String
+The kernel relation of f : α → β: a₁ ~ a₂ iff f a₁ = f a₂.
+This is always an equivalence relation.
+-/
 
-/-! ## Kernels of construction morphisms -/
-
-structure ConstructionKernel (α β : Type u) [Object α] [Object β] (f : α → β) where
+structure ConstructionKernel (α β : Type) [Object α] [Object β] (f : α → β) where
   ker : α → α → Prop := fun a₁ a₂ => f a₁ = f a₂
   isEquiv : Equivalence ker := {
     refl := fun a => rfl
@@ -318,49 +246,85 @@ structure ConstructionKernel (α β : Type u) [Object α] [Object β] (f : α �
   }
   name : String
 
-def constructionKernelOfMap {α β : Type u} [Object α] [Object β] (f : α → β) :
+def constructionKernelOfMap {α β : Type} [Object α] [Object β] (f : α → β) :
     ConstructionKernel α β f :=
   { name := s!"Ker({describe α}→{describe β})"
   }
 
-/-! ## Image of a construction morphism -/
+/-! ## Image of a Construction Morphism -/
 
-structure ConstructionImage (α β : Type u) [Object α] [Object β] (f : α → β) where
+structure ConstructionImage (α β : Type) [Object α] [Object β] (f : α → β) where
   im : β → Prop := fun b => ∃ a, f a = b
-  characteristic : ∀ b, im b ↔ ∃ a, f a = b := fun _ => ⟨fun h => h, fun h => h⟩
+  mem_iff : ∀ b, im b ↔ ∃ a, f a = b := fun _ => ⟨fun h => h, fun h => h⟩
   name : String
 
-def constructionImageOfMap {α β : Type u} [Object α] [Object β] (f : α → β) :
+def constructionImageOfMap {α β : Type} [Object α] [Object β] (f : α → β) :
     ConstructionImage α β f :=
   { name := s!"Im({describe α}→{describe β})"
   }
 
-/-! ## Exact sequence of constructions (2-term) -/
+/-! ## Coequalizer as a Universal Construction
 
-structure ExactPair (α β γ : Type u) [Object α] [Object β] [Object γ] (f : α → β) (g : β → γ) where
-  exact : ∀ (b : β), g b = g (f (Classical.choice (by
-    -- In an exact sequence, im(f) = ker(g)
-    -- For any b in im(f), g b = ... (zero in γ)
-    -- This is a formal statement
-    exact ⟨b, rfl⟩)))
+The coequalizer of f, g : β → α in Set is the quotient by the
+equivalence relation generated by f(b) ~ g(b) for all b ∈ β.
+Reference: Mac Lane III.3.
+-/
+
+structure Coequalizer (α β : Type) (f g : β → α) [Object α] [Object β] where
+  carrier : Type
+  [obj : Object carrier]
+  proj : α → carrier
+  coequal : ∀ (b : β), proj (f b) = proj (g b)
+  universal : ∀ {X : Type} [Object X] (h : α → X),
+    (∀ b, h (f b) = h (g b)) → carrier → X
+  universal_proj : ∀ {X : Type} [Object X] (h : α → X) (hEq : ∀ b, h (f b) = h (g b)) (a : α),
+    universal h hEq (proj a) = h a
+  unique : ∀ {X : Type} [Object X] (h : α → X) (hEq : ∀ b, h (f b) = h (g b)) (k : carrier → X),
+    (∀ a, k (proj a) = h a) → (∀ c, k c = universal h hEq c)
   name : String
 
-/-! ## Completion of a construction -/
+/-- The canonical coequalizer in Set: quotient by the relation generated by f(b) ~ g(b). -/
+def coequalizerConstruction {α β : Type} [Object α] [Object β] (f g : β → α) :
+    Coequalizer α β f g :=
+  { carrier := Quot fun a₁ a₂ => ∃ b, f b = a₁ ∧ g b = a₂ ∨ g b = a₁ ∧ f b = a₂
+    proj := Quot.mk _
+    coequal b := Quot.sound ⟨b, .inl ⟨rfl, rfl⟩⟩
+    universal h hEq := Quot.lift h fun a₁ a₂ => by
+      rintro ⟨b, (⟨rfl, rfl⟩ | ⟨rfl, rfl⟩)⟩
+      · exact hEq b
+      · symm; exact hEq b
+    universal_proj h hEq a := rfl
+    unique h hEq k hk := by
+      intro c
+      exact Quot.inductionOn c (hk ·)
+    name := s!"Coeq({describe α}, {describe β})"
+  }
 
-structure Completion (α : Type u) [Object α] where
-  completed : Type u
+/-! ## Completion of a Construction
+
+Models a metric-like completion: every Cauchy sequence converges
+(represented as the existence of a Nat-indexed approximation).
+-/
+
+structure Completion (α : Type) [Object α] where
+  completed : Type
   [obj : Object completed]
-  dense : α → completed
-  complete : ∀ (x : completed), True
+  embed : α → completed
+  dense : ∀ (x : completed), Nonempty (Nat → α)
   name : String
 
-/-! ## Localization of a construction -/
+/-! ## Localization of a Construction
 
-structure Localization (α : Type u) [Object α] (S : α → Prop) where
-  localized : Type u
+A localization of α at a multiplicative set S adds formal inverses
+for elements of S. The `invert` field states that each s ∈ S becomes
+invertible in the localization.
+-/
+
+structure Localization (α : Type) [Object α] (S : α → Prop) where
+  localized : Type
   [obj : Object localized]
   localize : α → localized
-  invert : ∀ (s : α), S s → ∃ (s_inv : localized), True
+  invert : ∀ (s : α), S s → Nonempty (localized → localized)
   name : String
 
 end MiniConstructionKernel

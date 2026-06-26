@@ -15,7 +15,7 @@ namespace MiniSyntaxKernel
 structure Variable where
   name : String
   index : Option Nat
-  deriving BEq, Hashable, Repr, Inhabited
+  deriving BEq, Hashable, Repr, Inhabited, DecidableEq
 
 instance : ToString Variable where
   toString v :=
@@ -42,13 +42,16 @@ inductive Term : Type where
   deriving BEq, Repr, Inhabited
 
 instance : ToString Term where
-  toString
-    | .var v => toString v
-    | .app f a => s!"({f} {a})"
-    | .lam v body => s!"(λ {v}. {body})"
-    | .pi v dom cod => s!"(Π {v}:{dom}. {cod})"
-    | .sort n => s!"Sort({n})"
-    | .lit n => s!"{n}"
-    | .letE v t b => s!"(let {v} := {t} in {b})"
+  toString t :=
+    let rec go (t' : Term) : String :=
+      match t' with
+      | .var v => toString v
+      | .app f a => s!"({go f} {go a})"
+      | .lam v body => s!"(λ {v}. {go body})"
+      | .pi v dom cod => s!"(Π {v}:{go dom}. {go cod})"
+      | .sort n => s!"Sort({n})"
+      | .lit n => s!"{n}"
+      | .letE v t b => s!"(let {v} := {go t} in {go b})"
+    go t
 
 end MiniSyntaxKernel

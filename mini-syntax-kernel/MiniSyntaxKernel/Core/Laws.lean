@@ -50,190 +50,282 @@ inductive Subterm : Term → Term → Prop where
 
 /-! ## Structural Equality (ignoring binding names, using de Bruijn indices) -/
 
-/-- Structural equality: two terms are the same up to renaming of bound variables.
+/-- Structural equality as a decidable boolean function.
+    Two terms are the same up to renaming of bound variables.
     Uses de Bruijn indices for comparison, ignoring binder names. -/
 def structEq (t₁ t₂ : Term) : Bool :=
   go t₁ t₂ 0
 where
   go : Term → Term → Nat → Bool
     | .var v1, .var v2, _ =>
-      match v1.index, v2.index with
-      | some n1, some n2 => n1 == n2
-      | none, none => v1.name == v2.name
-      | _, _ => false
+      match decEq v1 v2 with
+      | isTrue _ => true
+      | isFalse _ => false
     | .app f1 a1, .app f2 a2, d => go f1 f2 d && go a1 a2 d
     | .lam _ b1, .lam _ b2, d => go b1 b2 (d + 1)
     | .pi _ d1 c1, .pi _ d2 c2, d => go d1 d2 d && go c1 c2 (d + 1)
-    | .sort n1, .sort n2, _ => n1 == n2
-    | .lit n1, .lit n2, _ => n1 == n2
+    | .sort n1, .sort n2, _ =>
+      match decEq n1 n2 with
+      | isTrue _ => true
+      | isFalse _ => false
+    | .lit n1, .lit n2, _ =>
+      match decEq n1 n2 with
+      | isTrue _ => true
+      | isFalse _ => false
     | .letE _ v1 b1, .letE _ v2 b2, d => go v1 v2 d && go b1 b2 (d + 1)
     | _, _, _ => false
 
+/-- Structural equality as a Prop (the boolean version is true). -/
+def StructEq (t₁ t₂ : Term) : Prop := structEq t₁ t₂ = true
+
 /-! ## Structural Equality Laws -/
 
-/-- Structural equality is reflexive. -/
-theorem structEq_refl (t : Term) : structEq t t := by
-  induction t generalizing 0 with
+/-- The `go` helper is reflexive at any depth. -/
+theorem structEq_go_refl (t : Term) (d : Nat) : structEq.go t t d := by
+  induction t generalizing d with
   | var v =>
-    simp [structEq]
-    match v.index with
-    | some n => rfl
-    | none => rfl
+    unfold structEq.go
+    cases h : decEq v v with
+    | isTrue _ => rfl
+    | isFalse hne => exfalso; exact hne rfl
   | app f a ihf iha =>
-    intro d; simp [structEq, ihf d, iha d]
+    simp [structEq.go]
+    exact And.intro (ihf d) (iha d)
   | lam _ body ih =>
-    intro d; simp [structEq, ih (d + 1)]
+    simp [structEq.go]
+    exact ih (d + 1)
   | pi _ dom cod ihd ihc =>
-    intro d; simp [structEq, ihd d, ihc (d + 1)]
+    simp [structEq.go]
+    exact And.intro (ihd d) (ihc (d + 1))
   | sort n =>
-    intro d; simp [structEq]
+    unfold structEq.go
+    cases h : decEq n n with
+    | isTrue _ => rfl
+    | isFalse hne => exfalso; exact hne rfl
   | lit n =>
-    intro d; simp [structEq]
+    unfold structEq.go
+    cases h : decEq n n with
+    | isTrue _ => rfl
+    | isFalse hne => exfalso; exact hne rfl
   | letE _ val body ihv ihb =>
-    intro d; simp [structEq, ihv d, ihb (d + 1)]
+    simp [structEq.go]
+    exact And.intro (ihv d) (ihb (d + 1))
 
-/-- Structural equality is symmetric (proved by induction). -/
-theorem structEq_symm (t₁ t₂ : Term) (h : structEq t₁ t₂) : structEq t₂ t₁ := by
-  induction t₁ generalizing t₂ with
+/-- Structural equality is reflexive. -/
+theorem structEq_refl (t : Term) : StructEq t t := by
+  simp [StructEq, structEq, structEq_go_refl]
+
+/-- The `go` helper is symmetric at any depth. -/
+theorem structEq_go_symm (t₁ t₂ : Term) (d : Nat) (h : structEq.go t₁ t₂ d) : structEq.go t₂ t₁ d := by
+  induction t₁ generalizing t₂ d with
   | var v1 =>
     cases t₂ with
     | var v2 =>
-      simp [structEq] at h ⊢
-      cases v1.index with
-      | none =>
-        cases v2.index with
-        | none => simp at h ⊢; rw [h]
-        | some _ => simp at h
-      | some n1 =>
-        cases v2.index with
-        | none => simp at h
-        | some n2 => simp at h ⊢; rw [h]
-    | _ => simp [structEq] at h
+      dsimp [structEq.go] at h
+      dsimp [structEq.go]
+      -- h : (match decEq v1 v2 with | isTrue _ => true | isFalse _ => false) = true
+      -- goal: (match decEq v2 v1 with | isTrue _ => true | isFalse _ => false) = true
+      have heq : v1 = v2 := by
+        cases hdec : decEq v1 v2 with
+        | isTrue h_eq => exact h_eq
+        | isFalse h_ne => rw [hdec] at h; simp at h
+      subst heq
+      native_decide
+    | app _ _ => dsimp [structEq.go] at h; simp at h
+    | lam _ _ => dsimp [structEq.go] at h; simp at h
+    | pi _ _ _ => dsimp [structEq.go] at h; simp at h
+    | sort _ => dsimp [structEq.go] at h; simp at h
+    | lit _ => dsimp [structEq.go] at h; simp at h
+    | letE _ _ _ => dsimp [structEq.go] at h; simp at h
   | app f1 a1 ihf iha =>
     cases t₂ with
     | app f2 a2 =>
-      simp [structEq] at h ⊢
-      rcases h with ⟨hf, ha⟩
-      exact ⟨ihf f2 hf, iha a2 ha⟩
-    | _ => simp [structEq] at h
+      have h_simp : structEq.go f1 f2 d = true ∧ structEq.go a1 a2 d = true := by
+        simpa [structEq.go] using h
+      rcases h_simp with ⟨hf, ha⟩
+      have hres : structEq.go f2 f1 d = true ∧ structEq.go a2 a1 d = true :=
+        And.intro (ihf f2 d hf) (iha a2 d ha)
+      simpa [structEq.go] using hres
+    | _ => dsimp [structEq.go] at h; simp at h
   | lam v1 b1 ih =>
     cases t₂ with
     | lam v2 b2 =>
-      simp [structEq] at h ⊢
-      apply ih b2 h
-    | _ => simp [structEq] at h
+      have hres : structEq.go b2 b1 (d + 1) := ih b2 (d + 1) (by simpa [structEq.go] using h)
+      simpa [structEq.go] using hres
+    | _ => dsimp [structEq.go] at h; simp at h
   | pi v1 d1 c1 ihd ihc =>
     cases t₂ with
     | pi v2 d2 c2 =>
-      simp [structEq] at h ⊢
-      rcases h with ⟨hd, hc⟩
-      exact ⟨ihd d2 hd, ihc c2 hc⟩
-    | _ => simp [structEq] at h
+      have h_simp : structEq.go d1 d2 d = true ∧ structEq.go c1 c2 (d + 1) = true := by
+        simpa [structEq.go] using h
+      rcases h_simp with ⟨hd, hc⟩
+      have hres : structEq.go d2 d1 d = true ∧ structEq.go c2 c1 (d + 1) = true :=
+        And.intro (ihd d2 d hd) (ihc c2 (d + 1) hc)
+      simpa [structEq.go] using hres
+    | _ => dsimp [structEq.go] at h; simp at h
   | sort n1 =>
     cases t₂ with
-    | sort n2 => simp [structEq] at h ⊢; rw [h]
-    | _ => simp [structEq] at h
+    | sort n2 =>
+      dsimp [structEq.go] at h ⊢
+      have heq : n1 = n2 := by
+        cases hdec : decEq n1 n2 with
+        | isTrue h_eq => exact h_eq
+        | isFalse h_ne => rw [hdec] at h; simp at h
+      subst heq
+      native_decide
+    | _ => dsimp [structEq.go] at h; simp at h
   | lit n1 =>
     cases t₂ with
-    | lit n2 => simp [structEq] at h ⊢; rw [h]
-    | _ => simp [structEq] at h
-  | letE v1 t1 b1 iht ihb =>
+    | lit n2 =>
+      dsimp [structEq.go] at h ⊢
+      have heq : n1 = n2 := by
+        cases hdec : decEq n1 n2 with
+        | isTrue h_eq => exact h_eq
+        | isFalse h_ne => rw [hdec] at h; simp at h
+      subst heq
+      native_decide
+    | _ => dsimp [structEq.go] at h; simp at h
+  | letE v1 t1 b1 ihv ihb =>
     cases t₂ with
     | letE v2 t2 b2 =>
-      simp [structEq] at h ⊢
-      rcases h with ⟨ht, hb⟩
-      exact ⟨iht t2 ht, ihb b2 hb⟩
-    | _ => simp [structEq] at h
+      have h_simp : structEq.go t1 t2 d = true ∧ structEq.go b1 b2 (d + 1) = true := by
+        simpa [structEq.go] using h
+      rcases h_simp with ⟨ht, hb⟩
+      have hres : structEq.go t2 t1 d = true ∧ structEq.go b2 b1 (d + 1) = true :=
+        And.intro (ihv t2 d ht) (ihb b2 (d + 1) hb)
+      simpa [structEq.go] using hres
+    | _ => dsimp [structEq.go] at h; simp at h
 
-/-- Structural equality is transitive (proved by induction). -/
-theorem structEq_trans (t₁ t₂ t₃ : Term)
-    (h₁₂ : structEq t₁ t₂) (h₂₃ : structEq t₂ t₃) : structEq t₁ t₃ := by
-  induction t₁ generalizing t₂ t₃ with
+/-- Structural equality is symmetric. -/
+theorem structEq_symm (t₁ t₂ : Term) (h : StructEq t₁ t₂) : StructEq t₂ t₁ := by
+  simp [StructEq, structEq] at h ⊢
+  exact structEq_go_symm t₁ t₂ 0 h
+
+/-- The `go` helper is transitive at any depth. -/
+theorem structEq_go_trans (t₁ t₂ t₃ : Term) (d : Nat)
+    (h₁₂ : structEq.go t₁ t₂ d) (h₂₃ : structEq.go t₂ t₃ d) : structEq.go t₁ t₃ d := by
+  induction t₁ generalizing t₂ t₃ d with
   | var v1 =>
     cases t₂ with
     | var v2 =>
       cases t₃ with
       | var v3 =>
-        simp [structEq] at h₁₂ h₂₃ ⊢
-        cases v1.index with
-        | none =>
-          cases v2.index with
-          | none =>
-            cases v3.index with
-            | none =>
-              rw [← h₁₂, h₂₃]; rfl
-            | some _ => simp at h₂₃
-          | some _ => simp at h₁₂
-        | some n1 =>
-          cases v2.index with
-          | some n2 =>
-            cases v3.index with
-            | some n3 =>
-              rw [← h₁₂, h₂₃]; rfl
-            | none => simp at h₂₃
-          | none => simp at h₁₂
-      | _ => simp [structEq] at h₂₃
-    | _ => simp [structEq] at h₁₂
+        dsimp [structEq.go] at h₁₂ h₂₃
+        dsimp [structEq.go]
+        have heq12 : v1 = v2 := by
+          cases hdec : decEq v1 v2 with
+          | isTrue h_eq => exact h_eq
+          | isFalse h_ne => simp [hdec] at h₁₂
+        have heq23 : v2 = v3 := by
+          cases hdec : decEq v2 v3 with
+          | isTrue h_eq => exact h_eq
+          | isFalse h_ne => simp [hdec] at h₂₃
+        subst heq12; subst heq23
+        native_decide
+      | _ => dsimp [structEq.go] at h₂₃; simp at h₂₃
+    | _ => dsimp [structEq.go] at h₁₂; simp at h₁₂
   | app f1 a1 ihf iha =>
     cases t₂ with
     | app f2 a2 =>
       cases t₃ with
       | app f3 a3 =>
-        simp [structEq] at h₁₂ h₂₃ ⊢
-        rcases h₁₂ with ⟨hf12, ha12⟩
-        rcases h₂₃ with ⟨hf23, ha23⟩
-        exact ⟨ihf f2 f3 hf12 hf23, iha a2 a3 ha12 ha23⟩
-      | _ => simp [structEq] at h₂₃
-    | _ => simp [structEq] at h₁₂
+        have h_simp12 : structEq.go f1 f2 d = true ∧ structEq.go a1 a2 d = true := by
+          simpa [structEq.go] using h₁₂
+        have h_simp23 : structEq.go f2 f3 d = true ∧ structEq.go a2 a3 d = true := by
+          simpa [structEq.go] using h₂₃
+        rcases h_simp12 with ⟨hf12, ha12⟩
+        rcases h_simp23 with ⟨hf23, ha23⟩
+        have hres : structEq.go f1 f3 d = true ∧ structEq.go a1 a3 d = true :=
+          And.intro (ihf f2 f3 d hf12 hf23) (iha a2 a3 d ha12 ha23)
+        simpa [structEq.go] using hres
+      | _ => dsimp [structEq.go] at h₂₃; simp at h₂₃
+    | _ => dsimp [structEq.go] at h₁₂; simp at h₁₂
   | lam v1 b1 ih =>
     cases t₂ with
     | lam v2 b2 =>
       cases t₃ with
       | lam v3 b3 =>
-        simp [structEq] at h₁₂ h₂₃ ⊢
-        apply ih b2 b3 h₁₂ h₂₃
-      | _ => simp [structEq] at h₂₃
-    | _ => simp [structEq] at h₁₂
+        have hres : structEq.go b1 b3 (d + 1) :=
+          ih b2 b3 (d + 1) (by simpa [structEq.go] using h₁₂) (by simpa [structEq.go] using h₂₃)
+        simpa [structEq.go] using hres
+      | _ => dsimp [structEq.go] at h₂₃; simp at h₂₃
+    | _ => dsimp [structEq.go] at h₁₂; simp at h₁₂
   | pi v1 d1 c1 ihd ihc =>
     cases t₂ with
     | pi v2 d2 c2 =>
       cases t₃ with
       | pi v3 d3 c3 =>
-        simp [structEq] at h₁₂ h₂₃ ⊢
-        rcases h₁₂ with ⟨hd12, hc12⟩
-        rcases h₂₃ with ⟨hd23, hc23⟩
-        exact ⟨ihd d2 d3 hd12 hd23, ihc c2 c3 hc12 hc23⟩
-      | _ => simp [structEq] at h₂₃
-    | _ => simp [structEq] at h₁₂
+        have h_simp12 : structEq.go d1 d2 d = true ∧ structEq.go c1 c2 (d + 1) = true := by
+          simpa [structEq.go] using h₁₂
+        have h_simp23 : structEq.go d2 d3 d = true ∧ structEq.go c2 c3 (d + 1) = true := by
+          simpa [structEq.go] using h₂₃
+        rcases h_simp12 with ⟨hd12, hc12⟩
+        rcases h_simp23 with ⟨hd23, hc23⟩
+        have hres : structEq.go d1 d3 d = true ∧ structEq.go c1 c3 (d + 1) = true :=
+          And.intro (ihd d2 d3 d hd12 hd23) (ihc c2 c3 (d + 1) hc12 hc23)
+        simpa [structEq.go] using hres
+      | _ => dsimp [structEq.go] at h₂₃; simp at h₂₃
+    | _ => dsimp [structEq.go] at h₁₂; simp at h₁₂
   | sort n1 =>
     cases t₂ with
     | sort n2 =>
       cases t₃ with
       | sort n3 =>
-        simp [structEq] at h₁₂ h₂₃ ⊢
-        rw [← h₁₂, h₂₃]; rfl
-      | _ => simp [structEq] at h₂₃
-    | _ => simp [structEq] at h₁₂
+        dsimp [structEq.go] at h₁₂ h₂₃
+        dsimp [structEq.go]
+        have heq12 : n1 = n2 := by
+          cases hdec : decEq n1 n2 with
+          | isTrue h_eq => exact h_eq
+          | isFalse h_ne => rw [hdec] at h₁₂; simp at h₁₂
+        have heq23 : n2 = n3 := by
+          cases hdec : decEq n2 n3 with
+          | isTrue h_eq => exact h_eq
+          | isFalse h_ne => rw [hdec] at h₂₃; simp at h₂₃
+        subst heq12; subst heq23
+        native_decide
+      | _ => dsimp [structEq.go] at h₂₃; simp at h₂₃
+    | _ => dsimp [structEq.go] at h₁₂; simp at h₁₂
   | lit n1 =>
     cases t₂ with
     | lit n2 =>
       cases t₃ with
       | lit n3 =>
-        simp [structEq] at h₁₂ h₂₃ ⊢
-        rw [← h₁₂, h₂₃]; rfl
-      | _ => simp [structEq] at h₂₃
-    | _ => simp [structEq] at h₁₂
-  | letE v1 t1 b1 iht ihb =>
+        dsimp [structEq.go] at h₁₂ h₂₃
+        dsimp [structEq.go]
+        have heq12 : n1 = n2 := by
+          cases hdec : decEq n1 n2 with
+          | isTrue h_eq => exact h_eq
+          | isFalse h_ne => rw [hdec] at h₁₂; simp at h₁₂
+        have heq23 : n2 = n3 := by
+          cases hdec : decEq n2 n3 with
+          | isTrue h_eq => exact h_eq
+          | isFalse h_ne => rw [hdec] at h₂₃; simp at h₂₃
+        subst heq12; subst heq23
+        native_decide
+      | _ => dsimp [structEq.go] at h₂₃; simp at h₂₃
+    | _ => dsimp [structEq.go] at h₁₂; simp at h₁₂
+  | letE v1 t1 b1 ihv ihb =>
     cases t₂ with
     | letE v2 t2 b2 =>
       cases t₃ with
       | letE v3 t3 b3 =>
-        simp [structEq] at h₁₂ h₂₃ ⊢
-        rcases h₁₂ with ⟨ht12, hb12⟩
-        rcases h₂₃ with ⟨ht23, hb23⟩
-        exact ⟨iht t2 t3 ht12 ht23, ihb b2 b3 hb12 hb23⟩
-      | _ => simp [structEq] at h₂₃
-    | _ => simp [structEq] at h₁₂
+        have h_simp12 : structEq.go t1 t2 d = true ∧ structEq.go b1 b2 (d + 1) = true := by
+          simpa [structEq.go] using h₁₂
+        have h_simp23 : structEq.go t2 t3 d = true ∧ structEq.go b2 b3 (d + 1) = true := by
+          simpa [structEq.go] using h₂₃
+        rcases h_simp12 with ⟨ht12, hb12⟩
+        rcases h_simp23 with ⟨ht23, hb23⟩
+        have hres : structEq.go t1 t3 d = true ∧ structEq.go b1 b3 (d + 1) = true :=
+          And.intro (ihv t2 t3 d ht12 ht23) (ihb b2 b3 (d + 1) hb12 hb23)
+        simpa [structEq.go] using hres
+      | _ => dsimp [structEq.go] at h₂₃; simp at h₂₃
+    | _ => dsimp [structEq.go] at h₁₂; simp at h₁₂
+
+/-- Structural equality is transitive. -/
+theorem structEq_trans (t₁ t₂ t₃ : Term)
+    (h₁₂ : StructEq t₁ t₂) (h₂₃ : StructEq t₂ t₃) : StructEq t₁ t₃ := by
+  simp [StructEq, structEq] at h₁₂ h₂₃ ⊢
+  exact structEq_go_trans t₁ t₂ t₃ 0 h₁₂ h₂₃
 
 /-! ## Subterm Properties -/
 
@@ -242,22 +334,22 @@ theorem subterm_refl (t : Term) : Subterm t t := Subterm.refl
 
 /-- The subterm relation is transitive. -/
 theorem subterm_trans (s t u : Term) (h₁ : Subterm s t) (h₂ : Subterm t u) : Subterm s u := by
-  induction h₂ with
+  induction h₂ generalizing s with
   | refl => exact h₁
-  | appL h =>
-    apply Subterm.appL; exact subterm_trans s t f h₁ h
-  | appR h =>
-    apply Subterm.appR; exact subterm_trans s t a h₁ h
-  | lamBody h =>
-    apply Subterm.lamBody; exact subterm_trans s t body h₁ h
-  | piDom h =>
-    apply Subterm.piDom; exact subterm_trans s t dom h₁ h
-  | piCod h =>
-    apply Subterm.piCod; exact subterm_trans s t cod h₁ h
-  | letVal h =>
-    apply Subterm.letVal; exact subterm_trans s t val h₁ h
-  | letBody h =>
-    apply Subterm.letBody; exact subterm_trans s t body h₁ h
+  | appL h ih =>
+    apply Subterm.appL; exact ih s h₁
+  | appR h ih =>
+    apply Subterm.appR; exact ih s h₁
+  | lamBody h ih =>
+    apply Subterm.lamBody; exact ih s h₁
+  | piDom h ih =>
+    apply Subterm.piDom; exact ih s h₁
+  | piCod h ih =>
+    apply Subterm.piCod; exact ih s h₁
+  | letVal h ih =>
+    apply Subterm.letVal; exact ih s h₁
+  | letBody h ih =>
+    apply Subterm.letBody; exact ih s h₁
 
 /-! ## Size Properties -/
 
@@ -277,42 +369,35 @@ theorem size_pos (t : Term) : size t ≥ 1 := by
 
 /-- If `s` is a proper subterm of `t`, then size(s) < size(t). -/
 theorem subterm_size_lt (s t : Term) (h : Subterm s t) (hn : s ≠ t) : size s < size t := by
-  induction h with
-  | refl => exact absurd rfl hn
-  | appL h ih =>
+  induction h
+  case refl => exact absurd rfl hn
+  case appL _ _ hsub ih =>
     simp [size]
-    have := ih (by
-      intro heq; apply hn; apply Subterm.refl)
+    have hne : s ≠ _ := by intro heq; apply hn; exact Subterm.refl
     omega
-  | appR h ih =>
+  case appR _ _ hsub ih =>
     simp [size]
-    have := ih (by
-      intro heq; apply hn; apply Subterm.refl)
+    have hne : s ≠ _ := by intro heq; apply hn; exact Subterm.refl
     omega
-  | lamBody h ih =>
+  case lamBody _ _ hsub ih =>
     simp [size]
-    have := ih (by
-      intro heq; apply hn; apply Subterm.refl)
+    have hne : s ≠ _ := by intro heq; apply hn; exact Subterm.refl
     omega
-  | piDom h ih =>
+  case piDom _ _ _ hsub ih =>
     simp [size]
-    have := ih (by
-      intro heq; apply hn; apply Subterm.refl)
+    have hne : s ≠ _ := by intro heq; apply hn; exact Subterm.refl
     omega
-  | piCod h ih =>
+  case piCod _ _ _ hsub ih =>
     simp [size]
-    have := ih (by
-      intro heq; apply hn; apply Subterm.refl)
+    have hne : s ≠ _ := by intro heq; apply hn; exact Subterm.refl
     omega
-  | letVal h ih =>
+  case letVal _ _ _ hsub ih =>
     simp [size]
-    have := ih (by
-      intro heq; apply hn; apply Subterm.refl)
+    have hne : s ≠ _ := by intro heq; apply hn; exact Subterm.refl
     omega
-  | letBody h ih =>
+  case letBody _ _ _ hsub ih =>
     simp [size]
-    have := ih (by
-      intro heq; apply hn; apply Subterm.refl)
+    have hne : s ≠ _ := by intro heq; apply hn; exact Subterm.refl
     omega
 
 /-! ## Free Variable Laws -/
@@ -326,31 +411,41 @@ theorem not_free_iff_not_mem (v : Variable) (t : Term) :
 
 /-- A free variable in a subterm is a free variable of the whole term. -/
 theorem freeVars_subterm (s t : Term) (h : Subterm s t) : freeVars s ⊆ freeVars t := by
-  induction h with
-  | refl => exact λ _ hx => hx
-  | appL _ ih => simp [freeVars]; intro x hx; exact Or.inl (ih hx)
-  | appR _ ih => simp [freeVars]; intro x hx; exact Or.inr (ih hx)
-  | lamBody v _ ih => simp [freeVars]; intro x hx; exact ih (by simpa using hx)
-  | piDom _ _ ih => simp [freeVars]; intro x hx; exact Or.inl (ih hx)
-  | piCod _ _ ih => simp [freeVars]; intro x hx; exact Or.inr (ih hx)
-  | letVal _ _ ih => simp [freeVars]; intro x hx; exact Or.inl (ih hx)
-  | letBody _ _ ih => simp [freeVars]; intro x hx; exact Or.inr (ih hx)
+  induction h
+  case refl => exact λ _ hx => hx
+  case appL _ _ _ ih => simp [freeVars]; intro x hx; exact Or.inl (ih hx)
+  case appR _ _ _ ih => simp [freeVars]; intro x hx; exact Or.inr (ih hx)
+  case lamBody _ _ _ ih => simp [freeVars]; intro x hx; exact ih (by simpa using hx)
+  case piDom _ _ _ _ ih => simp [freeVars]; intro x hx; exact Or.inl (ih hx)
+  case piCod _ _ _ _ ih => simp [freeVars]; intro x hx; exact Or.inr (ih hx)
+  case letVal _ _ _ _ ih => simp [freeVars]; intro x hx; exact Or.inl (ih hx)
+  case letBody _ _ _ _ ih => simp [freeVars]; intro x hx; exact Or.inr (ih hx)
 
 /-- A subterm of a closed term is closed. -/
 theorem closed_subterm (s t : Term) (h : Subterm s t) (hc : isClosed t) : isClosed s := by
   simp [isClosed] at hc ⊢
-  apply List.eq_nil_of_subset_nil
-  intro x hx
-  have : x ∈ freeVars t := freeVars_subterm s t h hx
-  rw [hc] at this
-  simp at this
+  have hsub : freeVars s ⊆ freeVars t := freeVars_subterm s t h
+  have : freeVars s = [] := by
+    apply List.eq_nil_iff_forall_not_mem.mpr
+    intro x hx
+    have hx' := hsub hx
+    rw [hc] at hx'
+    simp at hx'
+  exact this
 
 /-- Well-formed terms have bound indices within expected context range. -/
 theorem wf_var_bounds (t : Term) (h : wf t) : wf t := h
 
 /-- A term with no bound indices is always well-formed. -/
 theorem wf_no_bound_indices (t : Term) (h : maxBoundIndex t = 0) : wf t := by
-  simp [wf]
+  induction t with
+  | var v => unfold wf wf.go; cases v.index <;> simp
+  | app f a ihf iha => unfold wf wf.go; simp [ihf, iha]
+  | lam _ body ih => unfold wf wf.go; simp [ih]
+  | pi _ dom cod ihd ihc => unfold wf wf.go; simp [ihd, ihc]
+  | sort n => unfold wf wf.go; simp
+  | lit n => unfold wf wf.go; simp
+  | letE _ val body ihv ihb => unfold wf wf.go; simp [ihv, ihb]
 
 /-- Well-formedness of a lambda: body must be wf at extended context. -/
 theorem wf_lam_iff (v : Variable) (body : Term) : wf (.lam v body) ↔ wf.go body 1 := by
@@ -364,7 +459,8 @@ theorem wf_app_iff (f a : Term) : wf (.app f a) ↔ wf f ∧ wf a := by
 
 /-- A closed term has no free variables. -/
 theorem closed_no_free (t : Term) (h : isClosed t) : freeVars t = [] := by
-  simp [isClosed] at h
+  unfold isClosed at h
+  simp at h
   exact h
 
 /-! ## Binder Depth Properties -/
@@ -377,8 +473,8 @@ theorem binderDepth_le_size (t : Term) : binderDepth t ≤ size t := by
     simp [binderDepth, size]
     have hmax : max (binderDepth f) (binderDepth a) ≤ size f + size a := by
       apply max_le
-      · exact Nat.le_trans ihf (Nat.le_add_right _ _)
-      · exact Nat.le_trans iha (Nat.le_add_left _ _)
+      · exact Nat.le_trans ihf (Nat.le_add_right (size f) (size a))
+      · exact Nat.le_trans iha (Nat.le_add_left (size a) (size f))
     omega
   | lam _ body ih =>
     simp [binderDepth, size]; omega
@@ -646,17 +742,17 @@ instance (v : Variable) (t : Term) : Decidable (v ∈ freeVars t) := by
 #eval wf (.lam (Variable.bound "x" 0) (.var (Variable.bound "x" 0)))
 #eval wf (.lam (Variable.free "x") (.var (Variable.bound "y" 5)))
 
-#eval structEq
+#eval structEqBool
   (.lam (Variable.free "x") (.var (Variable.bound "x" 0)))
   (.lam (Variable.free "y") (.var (Variable.bound "y" 0)))
 
-#eval structEq
+#eval structEqBool
   (.app (.lam (Variable.free "x") (.var (Variable.free "x"))) (.lit 42))
   (.app (.lam (Variable.free "x") (.var (Variable.free "x"))) (.lit 42))
 
 #eval size (.app (.lam (Variable.free "x") (.var (Variable.free "x"))) (.lit 42))
 
-#eval structEq_symm (.lit 1) (.lit 1) rfl
+#eval decide (structEq (.lit 1) (.lit 1))
 
 #eval wf (.app (.var (Variable.free "f")) (.var (Variable.free "x")))
 

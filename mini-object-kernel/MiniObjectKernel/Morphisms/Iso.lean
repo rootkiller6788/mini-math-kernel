@@ -19,6 +19,8 @@ import MiniObjectKernel.Core.Basic
 
 namespace MiniObjectKernel
 
+universe u v
+
 /-- A convenient abbreviation for equality of elements of the same type. -/
 abbrev ObjEq (α : Type u) (x y : α) : Prop := x = y
 
@@ -32,6 +34,11 @@ structure Iso (α β : Type u) [Object α] [Object β] where
   invFun   : β → α
   leftInv  : ∀ x, invFun (toFun x) = x
   rightInv : ∀ y, toFun (invFun y) = y
+
+/-- Extensionality: two isomorphisms are equal if their toFun and invFun agree. -/
+theorem Iso.ext {α β : Type u} [Object α] [Object β] (i₁ i₂ : Iso α β)
+    (ht : i₁.toFun = i₂.toFun) (hi : i₁.invFun = i₂.invFun) : i₁ = i₂ := by
+  cases i₁; cases i₂; simp at ht hi; subst ht hi; rfl
 
 /-- Congruence: if a = b, then f a = f b. -/
 def congrArg {α β : Type u} {a b : α} (f : α → β) (h : a = b) : f a = f b := h ▸ rfl
@@ -145,7 +152,7 @@ then I(α) = I(β). -/
 
 /-- A function `f : α → γ` is isomorphism-invariant if it gives the same
     result for isomorphic objects of the same "shape". -/
-def IsoInvariant {α β γ : Type u} [Object α] [Object β] (f : α → γ) : Prop :=
+def IsoInvariant {α β : Type u} {γ : Type v} [Object α] [Object β] (f : α → γ) : Prop :=
   ∀ (i : Iso α β) (x : α), f x = f (transportElem i x)
 
 /-! ## #eval examples — L6: Standard Examples -/
