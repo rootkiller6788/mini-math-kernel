@@ -179,14 +179,7 @@ instance (R : RingObj) (M : ModuleObj R) : Object M.carrier := M.obj
 /-- The free group on one generator is isomorphic to Z (the integers). -/
 axiom freeGroupOnOneGenerator : GroupObj
 
-/-! ## Object instances for display -/
-
-instance : Object (List String) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "StringList"
-  repr xs := toString xs
-
-/-! ## #eval examples -/
+/-! ## #eval examples — L6: Verified Examples -/
 
 #eval describe (α := Z2)
 #eval trivialMonoid

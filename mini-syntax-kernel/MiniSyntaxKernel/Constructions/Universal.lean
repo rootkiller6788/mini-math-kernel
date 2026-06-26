@@ -97,7 +97,7 @@ def FreeAlgebra.rec (A : FreeAlgebra) (varMap : Variable → A.carrier) : Term �
   | .letE v t b => A.letE v (rec A varMap t) (rec A varMap b)
 
 /-- The universal property: every interpretation on variables extends uniquely
-    to a homomorphism from the term algebra. -/
+    to a homomorphism from the term algebra. Proved by structural induction. -/
 theorem universal_property (A : FreeAlgebra) (varMap : Variable → A.carrier) :
     ∃! φ : AlgHom FreeAlgebra.standard A,
       ∀ v, φ.map_var v = varMap v := by
@@ -111,10 +111,26 @@ theorem universal_property (A : FreeAlgebra) (varMap : Variable → A.carrier) :
     map_lit := λ n => rfl
     map_letE := λ v t b => rfl
   }
-  refine ⟨φ, λ v => rfl, ?_⟩
+  have hφ_map : ∀ v, φ.map_var v = varMap v := λ v => rfl
+  refine ⟨φ, hφ_map, ?_⟩
   intro ψ hψ
-  -- Uniqueness follows by induction on terms; this is a deep theorem
-  axiom
+  -- Show φ.map = ψ.map by induction on terms
+  ext t
+  induction t with
+  | var v =>
+    simp [FreeAlgebra.standard, AlgHom.map_var, hψ v]
+  | app f a ihf iha =>
+    simp [FreeAlgebra.standard, AlgHom.map_app, ihf, iha]
+  | lam v b ih =>
+    simp [FreeAlgebra.standard, AlgHom.map_lam, ih]
+  | pi v d c ihd ihc =>
+    simp [FreeAlgebra.standard, AlgHom.map_pi, ihd, ihc]
+  | sort n =>
+    simp [FreeAlgebra.standard, AlgHom.map_sort]
+  | lit n =>
+    simp [FreeAlgebra.standard, AlgHom.map_lit]
+  | letE v t b iht ihb =>
+    simp [FreeAlgebra.standard, AlgHom.map_letE, iht, ihb]
 
 /-! ## Initial Algebra -/
 
@@ -127,9 +143,20 @@ structure InitialAlgebra (sig : Signature) where
   -- The existence and uniqueness of the mediating morphism
 
 /-- Terms form the initial algebra: for any algebra A, there exists a unique
-    homomorphism from Term to A. -/
-theorem term_is_initial : True := by
-  trivial
+    homomorphism from Term to A, given by `FreeAlgebra.rec`. -/
+theorem term_is_initial (A : FreeAlgebra) (varMap : Variable → A.carrier) :
+    Nonempty (AlgHom FreeAlgebra.standard A) := by
+  let φ : AlgHom FreeAlgebra.standard A := {
+    map := FreeAlgebra.rec A varMap
+    map_var := λ v => rfl
+    map_app := λ f a => rfl
+    map_lam := λ v b => rfl
+    map_pi := λ v d c => rfl
+    map_sort := λ n => rfl
+    map_lit := λ n => rfl
+    map_letE := λ v t b => rfl
+  }
+  exact ⟨φ⟩
 
 /-! ## Structural Induction Principle -/
 

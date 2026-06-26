@@ -16,8 +16,8 @@ namespace MiniSyntaxKernel
 
 open Term
 
-/-- Identity function (local definition for counterexamples). -/
-def idFun : Term := .lam (Variable.free "x") (.var (Variable.free "x"))
+/-- Identity function (local definition for counterexamples, to avoid name conflict with Standard.lean). -/
+def idTermCE : Term := .lam (Variable.free "x") (.var (Variable.free "x"))
 
 /-! ## Non-Normalizing Terms -/
 
@@ -93,8 +93,8 @@ example : isClosed openTerm = false := by
 /-! ## Terms That Are Not Values -/
 
 /-- An application is not a value. -/
-example : isValue (.app idFun (.lit 42)) = false := by
-  simp [isValue, idFun]
+example : isValue (.app idTermCE (.lit 42)) = false := by
+  simp [isValue, idTermCE]
 
 /-- A naked variable is neutral but not a value. -/
 example : isValue (.var (Variable.free "x")) = false := by

@@ -3,20 +3,14 @@
 
 Product structures, conjunction of theories,
 and combined logical systems.
+
+Knowledge coverage: L3 (Product constructions), L4 (Universal property of conjunction)
 -/
 
 import MiniLogicKernel.Core.Basic
 import MiniLogicKernel.Core.Objects
 
 namespace MiniLogicKernel
-
-/-! ## Helper: List Operations -/
-
-/-- Check if all elements of a list satisfy a predicate. -/
-def listAll {α : Type} (l : List α) (p : α → Bool) : Bool :=
-  match l with
-  | [] => true
-  | x :: xs => p x && listAll xs p
 
 /-! ## Product of Two Propositional Formulas -/
 
@@ -50,22 +44,24 @@ theorem formulaProduct_universal (C A B : Formula)
   simp [Formula.eval] at hAe hBe ⊢
   simp [hAe, hBe]
 
-/-! ## Brute-force Tautology Checker (for #eval) -/
+/-! ## #eval Tests -/
 
-/-- Enumerate all 2^n assignments for a list of n distinct atom variables. -/
-def allAssignments : List Nat → List (Nat → Bool)
-  | []      => [fun _ => false]
-  | v :: vs =>
-    let rest := allAssignments vs
-    let setTrue := rest.map fun σ n => if n = v then true else σ n
-    let setFalse := rest.map fun σ n => if n = v then false else σ n
-    setTrue ++ setFalse
+def pf1 : Formula := formulaProduct (.atom 0) (.atom 1)
+def pf2 : Formula := formulaProduct (.atom 0) (.not (.atom 0))
 
-/-- Check if a formula is a tautology by enumerating all assignments
-    for the atoms that actually appear in it. -/
-def checkTautologyBool (f : Formula) : Bool :=
-  let vars := f.atoms
-  listAll (allAssignments vars) fun σ => f.eval σ == true
+#eval pf1
+#eval pf1.eval (fun n => n = 0)
+#eval pf1.eval (fun n => n = 0 || n = 1)
+#eval pf2.eval (fun _ => false)
+#eval pf2.eval (fun n => n = 0)
+
+#eval checkTautologyBool (productMorphism_left (.atom 0) (.atom 1))
+#eval checkTautologyBool (productMorphism_right (.atom 0) (.atom 1))
+#eval checkTautologyBool (productMorphism_left (.atom 0) (.not (.atom 0)))
+
+def medExample := productMediating (.atom 2) (.atom 0) (.atom 1)
+#eval medExample
+#eval checkTautologyBool medExample
 
 /-! ## Product of Two Predicate Structures -/
 
@@ -130,7 +126,6 @@ theorem productMediating_tautology (C A B : Formula)
 
 /-! ## #eval Tests -/
 
--- Simple product formula examples
 def pf1 : Formula := formulaProduct (.atom 0) (.atom 1)
 def pf2 : Formula := formulaProduct (.atom 0) (.not (.atom 0))
 
@@ -140,12 +135,10 @@ def pf2 : Formula := formulaProduct (.atom 0) (.not (.atom 0))
 #eval pf2.eval (fun _ => false)
 #eval pf2.eval (fun n => n = 0)
 
--- Test projection formulas with brute-force tautology check
 #eval checkTautologyBool (productMorphism_left (.atom 0) (.atom 1))
 #eval checkTautologyBool (productMorphism_right (.atom 0) (.atom 1))
 #eval checkTautologyBool (productMorphism_left (.atom 0) (.not (.atom 0)))
 
--- Test mediating morphism
 def medExample := productMediating (.atom 2) (.atom 0) (.atom 1)
 #eval medExample
 #eval checkTautologyBool medExample

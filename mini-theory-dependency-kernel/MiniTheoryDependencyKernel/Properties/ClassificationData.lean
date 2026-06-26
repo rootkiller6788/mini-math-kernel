@@ -164,11 +164,11 @@ def classifyByProfile (g : DependencyGraph) : List DependencyProfile :=
 
 def mostFundamental (g : DependencyGraph) : Option TheoryName :=
   let profiles := classifyByProfile g
-  profiles.qsort DependencyProfile.compare |>.head? |>.map (·.name)
+  profiles.sort DependencyProfile.compare |>.head? |>.map (·.name)
 
 def mostDerived (g : DependencyGraph) : Option TheoryName :=
   let profiles := classifyByProfile g
-  profiles.qsort (fun a b => b.depth < a.depth) |>.head? |>.map (·.name)
+  profiles.sort (fun a b => b.depth < a.depth) |>.head? |>.map (·.name)
 
 /-! ## Classification Taxonomy
 

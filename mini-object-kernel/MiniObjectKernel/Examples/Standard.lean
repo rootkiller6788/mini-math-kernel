@@ -11,14 +11,10 @@ import MiniObjectKernel.Core.Basic
 
 namespace MiniObjectKernel
 
-/-! ## Set as an Object
+/-! ## Set as an Object — L6: Canonical Examples
 
-A set is the simplest mathematical object: no structure, just elements. -/
-
-instance : Object (List String) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "Set"
-  repr xs := "{" ++ String.intercalate ", " (xs.map (λ s => "\"" ++ s ++ "\"")) ++ "}"
+A set is the simplest mathematical object: no structure, just elements.
+We use List String with the canonical Object instance from Core.Basic. -/
 
 /-- The theory of sets. -/
 def setTheory : TheoryName := TheoryName.ofString "SetTheory"
@@ -26,12 +22,6 @@ def setTheory : TheoryName := TheoryName.ofString "SetTheory"
 /-- An element of a set (represented as a list for simplicity). -/
 def setMember (xs : List String) (x : String) : Bool :=
   xs.elem x
-
-/-- Empty set is initial in the category of sets. -/
-instance : Object Unit where
-  theory := setTheory
-  objName := "EmptySet"
-  repr _ := "∅"
 
 def emptySet : List String := []
 
@@ -153,15 +143,11 @@ def freeGenerator {T : TheoryName} : FreeOnOneGenerator T := .gen
 axiom freeObjectUniversal {T : TheoryName} {α : Type u} [Object α]
     (a : α) : FreeOnOneGenerator T → α
 
-/-! ## Terminal and Initial Objects
+/-! ## Terminal and Initial Objects — L6: Canonical Examples
 
 Terminal objects have a unique morphism from every object.
-Initial objects have a unique morphism to every object. -/
-
-instance : Object Empty where
-  theory := TheoryName.root
-  objName := "Initial"
-  repr e := nomatch e
+Initial objects have a unique morphism to every object.
+Object instances for Unit and Empty are in Core.Basic. -/
 
 /-- Unit is terminal. -/
 theorem unit_isTerminal : ∀ (β : Type u) [Object β], ∃! f : β → Unit, True := by

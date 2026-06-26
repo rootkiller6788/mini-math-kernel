@@ -14,26 +14,7 @@ import MiniConstructionKernel.Constructions.Quotients
 
 namespace MiniConstructionKernel
 
-open MiniObjectKernel
-
-/-! ## Object instances -/
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
-
 /-! ## Free Monoid (List) as Construction -/
-
-instance (α : Type u) [Object α] : Object (List α) where
-  theory := (Object.theory α).extend "List"
-  objName := s!"List({describe α})"
-  repr l := repr l
 
 def freeMonoidConstruction (α : Type u) [Object α] : Construction Unit (fun _ => α) (List α) :=
   { build := []
@@ -54,15 +35,6 @@ inductive FreeGroup (α : Type u) : Type u
   | mul : FreeGroup α → FreeGroup α → FreeGroup α
   deriving Inhabited
 
-instance (α : Type u) [Object α] : Object (FreeGroup α) where
-  theory := TheoryName.ofString "Group"
-  objName := s!"FreeGroup({describe α})"
-  repr
-    | FreeGroup.unit => "e"
-    | FreeGroup.gen a => s!"g({repr a})"
-    | FreeGroup.inv g => s!"({repr g})⁻¹"
-    | FreeGroup.mul g h => s!"({repr g})*({repr h})"
-
 def freeGroupConstruction (α : Type u) [Object α] : Construction Unit (fun _ => α) (FreeGroup α) :=
   { build := FreeGroup.unit
     name := s!"FreeGroup({describe α})"
@@ -77,15 +49,6 @@ inductive Polynomial (α : Type u) : Type u
   | mul : Polynomial α → Polynomial α → Polynomial α
   deriving Inhabited
 
-instance (α : Type u) [Object α] : Object (Polynomial α) where
-  theory := TheoryName.ofString "CommRing"
-  objName := s!"Z[{describe α}]"
-  repr
-    | Polynomial.const n => toString n
-    | Polynomial.var a => s!"x_({repr a})"
-    | Polynomial.add p q => s!"({repr p} + {repr q})"
-    | Polynomial.mul p q => s!"({repr p} * {repr q})"
-
 def polynomialConstruction (α : Type u) [Object α] : Construction Unit (fun _ => α) (Polynomial α) :=
   { build := Polynomial.const 0
     name := s!"PolynomialRing({describe α})"
@@ -96,11 +59,6 @@ def polynomialConstruction (α : Type u) [Object α] : Construction Unit (fun _ 
 structure TensorProduct (α β : Type u) where
   pure : α → β → TensorProduct α β
   deriving Inhabited
-
-instance (α β : Type u) [Object α] [Object β] : Object (TensorProduct α β) where
-  theory := TheoryName.ofString "Module"
-  objName := s!"{describe α}⊗{describe β}"
-  repr _ := "tensor"
 
 def tensorProductConstruction (α β : Type u) [Object α] [Object β] :
     Construction Unit (fun _ => α) (TensorProduct α β) :=
@@ -135,11 +93,6 @@ def kernelSubobject {α β : Type u} [Object α] [Object β] (f : α → β) : S
 structure FreeAbelianGroup (α : Type u) where
   coefficients : α → Int
   -- Finitely supported function α → Z
-
-instance (α : Type u) [Object α] : Object (FreeAbelianGroup α) where
-  theory := TheoryName.ofString "AbGroup"
-  objName := s!"FreeAb({describe α})"
-  repr _ := "free-abelian"
 
 def freeAbelianConstruction (α : Type u) [Object α] : Construction Unit (fun _ => α) (FreeAbelianGroup α) :=
   { build := { coefficients := fun _ => 0 }

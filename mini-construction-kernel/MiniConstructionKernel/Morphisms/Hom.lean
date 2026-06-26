@@ -9,16 +9,18 @@ and adjunctions between construction functors.
 import MiniConstructionKernel.Core.Basic
 import MiniConstructionKernel.Core.Objects
 import MiniConstructionKernel.Core.Laws
+import MiniConstructionKernel.Constructions.Products
+import MiniConstructionKernel.Constructions.Universal
 
 namespace MiniConstructionKernel
 
 /-! ## Construction Homomorphism -/
 
 -- A map between two constructions that preserves the construction structure
-structure ConstructionHom (C D : Type u → Type v) where
+structure ConstructionHom (C D : Type u → Type v) [FC : FunctorialConstruction C] [FD : FunctorialConstruction D] where
   component : {α : Type u} → [Object α] → C α → D α
-  natural : ∀ {α β : Type u} [Object α] [Object β] (f : α → β),
-    (∀ (x : C α), component β (C.mapByHom f x) = D.mapByHom f (component α x)) → True
+  natural : ∀ {α β : Type u} [Object α] [Object β] (f : α → β) (x : C α),
+    component β (FC.map f x) = FD.map f (component α x)
   name : String
 
 /-! ## Natural Transformation -/
@@ -26,18 +28,15 @@ structure ConstructionHom (C D : Type u → Type v) where
 -- Natural transformation between construction functors F, G : C → D
 structure NaturalTransformation (F G : Type u → Type v) [FC : FunctorialConstruction F] [GC : FunctorialConstruction G] where
   component : {α : Type u} → [Object α] → F α → G α
-  naturality : ∀ {α β : Type u} [Object α] [Object β] (f : α → β),
-    (∀ (x : F α), component β (FC.map f x) = GC.map f (component α x)) → True
+  naturality : ∀ {α β : Type u} [Object α] [Object β] (f : α → β) (x : F α),
+    component β (FC.map f x) = GC.map f (component α x)
   name : String
 
 /-! ## Construction Morphism Composition -/
 
-structure ConstructionMorphism (C D : Type u → Type v) where
+-- A morphism between constructions that preserves products and coproducts
+structure ConstructionMorphism (C D : Type u → Type v) [∀ α, Object (C α)] [∀ α, Object (D α)] where
   onObjects : {α : Type u} → [Object α] → C α → D α
-  preservesProduct : ∀ {α β : Type u} [Object α] [Object β],
-    (∀ (p : BinProduct (C α) (C β)), onObjects (BinProduct (C α) (C β)) p = onObjects (C α) p.1) → True
-  preservesCoproduct : ∀ {α β : Type u} [Object α] [Object β],
-    (∀ (c : Coproduct (C α) (C β)), onObjects (Coproduct (C α) (C β)) (Coproduct.inl c) = c) → True
   name : String
 
 /-! ## Adjunction between Constructions -/
@@ -72,17 +71,17 @@ def identityConstructionMorphism (α : Type u) [Object α] : ConstructionMono α
     name := s!"id({describe α})"
   }
 
+-- A constant morphism between identity constructions (requires FunctorialConstruction id)
+instance : FunctorialConstruction id where
+  map f x := x
+  map_id _ := True.intro
+  map_comp f g := True.intro
+  name := "id"
+
 def constantConstructionMorphism (α β : Type u) [Object α] [Object β] (b : β) : ConstructionHom id id where
   component _ _ _ := b
-  natural f _ := True.intro
+  natural f x := rfl
   name := s!"const({describe α}, {describe β})"
-  where
-    instance : FunctorialConstruction id := {
-      map _a f x := x
-      map_id _ := True.intro
-      map_comp f g := True.intro
-      name := "id"
-    }
 
 /-! ## Hom-Set Construction -/
 
@@ -109,33 +108,7 @@ def compConstructionMono {α β γ : Type u} [Object α] [Object β] [Object γ]
 
 section Examples
 
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
-
-instance : FunctorialConstruction Option where
-  map f
-    | none => none
-    | some a => some (f a)
-  map_id _ := True.intro
-  map_comp f g := True.intro
-  name := "Option"
-
-instance : FunctorialConstruction List where
-  map f
-    | [] => []
-    | a :: as => f a :: map f as
-  map_id _ := True.intro
-  map_comp f g := True.intro
-  name := "List"
+-- Object and FunctorialConstruction instances are in Core.Basic and Core.Laws
 
 def idMonoNat : ConstructionMono Nat Nat :=
   identityConstructionMorphism Nat

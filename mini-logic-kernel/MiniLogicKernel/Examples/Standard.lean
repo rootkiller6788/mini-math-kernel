@@ -10,40 +10,6 @@ import MiniLogicKernel.Core.Objects
 
 namespace MiniLogicKernel
 
-/-! ## Helper: List Operations -/
-
-/-- Check if all elements of a list satisfy a predicate. -/
-def listAll {α : Type} (l : List α) (p : α → Bool) : Bool :=
-  match l with
-  | [] => true
-  | x :: xs => p x && listAll xs p
-
-/-- Check if any element of a list satisfies a predicate. -/
-def listAny {α : Type} (l : List α) (p : α → Bool) : Bool :=
-  match l with
-  | [] => false
-  | x :: xs => p x || listAny xs p
-
-/-- Enumerate all 2^n assignments for a list of n distinct atom variables. -/
-def allAssignments : List Nat → List (Nat → Bool)
-  | []      => [fun _ => false]
-  | v :: vs =>
-    let rest := allAssignments vs
-    let setTrue := rest.map fun σ n => if n = v then true else σ n
-    let setFalse := rest.map fun σ n => if n = v then false else σ n
-    setTrue ++ setFalse
-
-/-- Check if a formula is a tautology by enumerating all assignments
-    for the atoms that appear in it. -/
-def checkTautologyBool (f : Formula) : Bool :=
-  let vars := f.atoms
-  listAll (allAssignments vars) fun σ => f.eval σ == true
-
-/-- Check if a formula is satisfiable by searching all assignments. -/
-def checkSatisfiableBool (f : Formula) : Bool :=
-  let vars := f.atoms
-  listAny (allAssignments vars) fun σ => f.eval σ == true
-
 /-! ## Standard Propositional Tautologies -/
 
 /-- Law of Identity: `A → A` -/

@@ -45,8 +45,8 @@ open MiniLogicKernel
 #eval decideTautology (Formula.and (Formula.atom 0) (Formula.not (Formula.atom 0)))
 
 /-! ## Examples: Standard -/
-#eval checkTautologyBool lawOfIdentity
-#eval checkTautologyBool lawOfNonContradiction
+#eval checkTautologyBool (lawOfIdentity (Formula.atom 0))
+#eval checkTautologyBool (nonContradictionForm (Formula.atom 0))
 
 /-! ## Bridges: Algebra, Topology, Geometry, Computation -/
 #eval decideTautology (Formula.impl (.atom 0) (.atom 0))

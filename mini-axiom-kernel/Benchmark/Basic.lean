@@ -32,7 +32,7 @@ def main : IO Unit := do
   let start3 ← IO.monoMsNow
   for _ in List.range 5000 do
     let a := Axiom.simple "bench" (Formula.atom 0)
-    let _ := a.formula
+    let _ := a.statement
     pure ()
   let elapsed3 := (← IO.monoMsNow) - start3
   IO.println s!"5000 axiom formula accesses: {elapsed3}ms"

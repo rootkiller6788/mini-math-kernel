@@ -116,16 +116,6 @@ def ninjaSimulate (g : DependencyGraph) (changedFile : TheoryName) : String :=
 def findDirtyTargets (g : DependencyGraph) (changed : List TheoryName) : List TheoryName :=
   changed.bind (fun name => g.transitiveDependents name) |>.eraseDups
 
-/-- Naive dedup for lists (preserving order, keeping first occurrence). -/
-def List.eraseDups (xs : List α) [BEq α] : List α :=
-  go xs []
-where
-  go : List α → List α → List α
-    | [], acc => acc.reverse
-    | x :: rest, acc =>
-      if acc.contains x then go rest acc
-      else go rest (x :: acc)
-
 /-! ## Continuous Integration Dependency Model
 
 CI pipelines are dependency graphs:
@@ -149,6 +139,152 @@ def CIPipeline.isBuildable (p : CIPipeline) : Bool :=
 def CIPipeline.buildSchedule (p : CIPipeline) : Option (List TheoryName) :=
   (p.toDependencyGraph).buildOrder
 
+/-! ## Makefile Dependency Analysis
+
+Analyzing a dependency graph as if it were a Makefile. Each theory node
+is a build target, and edges represent build dependencies.
+-/
+
+/-- Check which targets are "phony" (no build artifact, just a dependency group). -/
+def phonyTargets (g : DependencyGraph) : List TheoryName :=
+  g.nodes.filter (fun n =>
+    g.edgesTo n.name |>.isEmpty && g.edgesFrom n.name |>.isNotEmpty
+  ) |>.map (·.name)
+
+/-- Find the "default target" — first node in topological order. -/
+def defaultTarget (g : DependencyGraph) : Option TheoryName :=
+  match g.topologicalOrder with
+  | some (first :: _) => some first
+  | _ => none
+
+/-- Compute build levels for a Makefile-like build. Level 0 = no deps. -/
+def DependencyGraph.makeBuildLevels (g : DependencyGraph) : Option (List (List TheoryName)) :=
+  match g.topologicalOrder with
+  | none => none
+  | some order =>
+    let reverseOrder := order.reverse
+    some (go reverseOrder [])
+where
+  go : List TheoryName → List (List TheoryName) → List (List TheoryName)
+    | [], acc => acc
+    | n :: rest, acc =>
+      let deps := g.depsOf n
+      let level := deps.map (fun d =>
+        match acc.findIdx? (·.contains d) with
+        | none => 0
+        | some idx => idx + 1
+      ) |>.foldl max 0
+      -- Insert n at the right level
+      let (before, after) := acc.splitAt level
+      let newAcc := before
+      if after.isEmpty then
+        newAcc ++ [[n]]
+      else
+        let thisLevel := after.headD []
+        newAcc ++ [(thisLevel ++ [n])] ++ after.tailD
+      go rest newAcc
+
+/-- Estimate build time assuming unit time per target and perfect parallelism. -/
+def estimateBuildTime (g : DependencyGraph) : Option Nat :=
+  g.criticalPath
+
+/-- Estimate build time with limited workers. -/
+def estimateBuildTimeLimited (g : DependencyGraph) (workers : Nat) : Option Nat :=
+  match g.parallelism with
+  | none => none
+  | some levels =>
+    some (levels.foldl (fun acc levelSize =>
+      -- With `workers` parallel workers, each level takes ceil(levelSize / workers)
+      acc + ((levelSize + workers - 1) / workers)
+    ) 0)
+
+/-! ## Cache-Aware Dependency Analysis
+
+In build systems like Bazel or Buck, caching determines whether a target
+needs rebuilding. Cache invalidation propagates through the dependency graph.
+-/
+
+/-- Check if a target is "cacheable" — has no side effects (modeled as having no dependents of kind `test`). -/
+def isCacheable (g : DependencyGraph) (name : TheoryName) : Bool :=
+  !g.edges.any (fun e => e.source == name && e.kind == .test)
+
+/-- Find all targets that would be invalidated if cache for `name` is cleared. -/
+def cacheInvalidationSet (g : DependencyGraph) (name : TheoryName) : List TheoryName :=
+  g.transitiveDependents name
+
+/-- Compute cache hit probability (fraction of nodes that are cacheable). -/
+def cacheHitRate (g : DependencyGraph) : Float :=
+  if g.nodeCount == 0 then 0.0
+  else
+    let cacheable := g.nodes.filter (fun n => isCacheable g n.name) |>.length
+    cacheable.toFloat / g.nodeCount.toFloat
+
+/-! ## Package Manager Dependency Resolution
+
+Simulate a package manager (like npm, cargo, apt) resolving dependencies.
+-/
+
+/-- Resolve transitive dependencies with version constraints.
+    Returns Some (list of packages in install order) or None if conflict. -/
+def resolveDependencies (g : DependencyGraph) (root : TheoryName) : Option (List TheoryName) :=
+  -- In a valid graph, the topological order restricted to root's closure works
+  if !g.isAcyclic then none
+  else
+    let closure := g.dependencyClosure root
+    match g.topologicalOrder with
+    | none => none
+    | some order =>
+      some (order.filter closure.contains)
+
+/-- Check for diamond dependency conflicts: if two paths lead to different versions. -/
+def hasDiamondConflict (g : DependencyGraph) (name : TheoryName) : Bool :=
+  let paths := g.allPaths name name  -- self-paths indicate indirect diamond
+  paths.length > 1
+
+/-- List all theories that are transitively depended on (like `npm ls`). -/
+def listDependencies (g : DependencyGraph) (root : TheoryName) : List (TheoryName × Nat) :=
+  let deps := g.transitiveDeps root
+  deps.map fun d => (d, g.depth d)
+
+/-! ## Build Performance Analysis
+
+Analyzing build performance from the dependency graph structure.
+-/
+
+/-- Identify bottleneck targets: those on the critical path with high dependents. -/
+def bottleneckTargets (g : DependencyGraph) : List (TheoryName × Nat × Float) :=
+  let maxDep := g.nodes.map (fun n => (g.edgesTo n.name).length) |>.foldl max 0
+  g.nodes.filterMap fun n =>
+    let depCount := (g.edgesTo n.name).length
+    if depCount.toFloat >= (maxDep.toFloat * 0.5) then
+      some (n.name, depCount, g.impactFactor n.name)
+    else none
+
+/-- Compute the total rebuild cost if each target has a build cost (approximated by its depth). -/
+def totalRebuildCost (g : DependencyGraph) : Nat :=
+  g.nodes.foldl (fun acc n => acc + g.depth n.name) 0
+
+/-- Find targets that can be built in parallel (same topological level). -/
+def parallelBuildGroups (g : DependencyGraph) : Option (List (List TheoryName)) :=
+  match g.topologicalOrder with
+  | none => none
+  | some order =>
+    let groups := go order [] []
+    some groups
+where
+  go : List TheoryName → List TheoryName → List (List TheoryName) → List (List TheoryName)
+    | [], _, acc => acc.reverse
+    | n :: rest, built, acc =>
+      let deps := g.depsOf n
+      if deps.all built.contains then
+        -- All deps built → can build n now along with others at this level
+        let (sameLevel, rest') := rest.span (fun m =>
+          (g.depsOf m).all (fun d => built.contains d || d == n))
+        let group := n :: sameLevel
+        go rest' (group.map id ++ built) (group :: acc)
+      else
+        go (rest ++ [n]) built acc
+
 /-! ## Evaluations -/
 
 #eval do
@@ -162,7 +298,8 @@ def CIPipeline.buildSchedule (p : CIPipeline) : Option (List TheoryName) :=
     , edges := [ { source := b, target := a, kind := .import, description := none : DependencyEdge }
                , { source := c, target := b, kind := .import, description := none : DependencyEdge } ]
     }
-  (simulateBuild g, isValidMakeDependency g)
+  (simulateBuild g, isValidMakeDependency g, estimateBuildTime g,
+   estimateBuildTimeLimited g 2, resolveDependencies g c)
 
 #eval do
   let a := TheoryName.ofString "A"
@@ -175,7 +312,8 @@ def CIPipeline.buildSchedule (p : CIPipeline) : Option (List TheoryName) :=
     , edges := [ { source := b, target := a, kind := .import, description := none : DependencyEdge }
                , { source := c, target := a, kind := .import, description := none : DependencyEdge } ]
     }
-  (g.parallelism, g.criticalPath, g.totalWork, g.parallelSpeedup)
+  (g.parallelism, g.criticalPath, g.totalWork, g.parallelSpeedup,
+   cacheHitRate g, phonyTargets g, defaultTarget g)
 
 #eval do
   let a := TheoryName.ofString "Kernel"
@@ -188,6 +326,24 @@ def CIPipeline.buildSchedule (p : CIPipeline) : Option (List TheoryName) :=
     , edges := [ { source := b, target := a, kind := .import, description := none : DependencyEdge }
                , { source := c, target := b, kind := .import, description := none : DependencyEdge } ]
     }
-  (rebuildCost g a, ninjaSimulate g a)
+  (rebuildCost g a, ninjaSimulate g a, bottleneckTargets g, totalRebuildCost g)
+
+#eval do
+  let a := TheoryName.ofString "Base"
+  let b := TheoryName.ofString "Left"
+  let c := TheoryName.ofString "Right"
+  let d := TheoryName.ofString "Top"
+  let g : DependencyGraph :=
+    { nodes := [ TheoryNode.simple a "Base" "1" ""
+               , TheoryNode.simple b "Left" "1" ""
+               , TheoryNode.simple c "Right" "1" ""
+               , TheoryNode.simple d "Top" "1" "" ]
+    , edges := [ { source := b, target := a, kind := .import, description := none : DependencyEdge }
+               , { source := c, target := a, kind := .import, description := none : DependencyEdge }
+               , { source := d, target := b, kind := .import, description := none : DependencyEdge }
+               , { source := d, target := c, kind := .import, description := none : DependencyEdge } ]
+    }
+  (hasDiamondConflict g d, cacheInvalidationSet g a, listDependencies g d,
+   g.makeBuildLevels, parallelBuildGroups g)
 
 end MiniTheoryDependencyKernel

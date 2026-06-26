@@ -145,16 +145,6 @@ def classifyByAxiomCount (theories : List FormalTheory) : List EquivalenceClass 
     , members := ts
     }
 
-/-! ## Grouping helper
--/
-
-def List.groupBy (xs : List α) (eq : α → α → Bool) : List (List α) :=
-  match xs with
-  | [] => []
-  | x :: rest =>
-    let (group, others) := rest.partition (eq x)
-    (x :: group) :: others.groupBy eq
-
 /-! ## Evaluations -/
 
 #eval do

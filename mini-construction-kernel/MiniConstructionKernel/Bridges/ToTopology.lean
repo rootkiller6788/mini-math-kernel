@@ -121,16 +121,6 @@ def onePointCompactificationConstruction (X : TopologicalSpace) : Construction U
 
 /-! ## Evaluations -/
 
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
 def discTopNat := discreteTopologyConstruction Nat
 def indTopBool := indiscreteTopologyConstruction Bool
 

@@ -167,18 +167,6 @@ def subConstructionToSubobject {α : Type u} [Object α] (sc : SubConstruction �
 
 section Examples
 
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
 def evenNatSubobject : Subobject Nat :=
   subobjectOfPredicate (fun n => n % 2 = 0) "EvenNat"
 

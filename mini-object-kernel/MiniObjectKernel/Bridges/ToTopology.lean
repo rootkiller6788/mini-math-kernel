@@ -157,14 +157,7 @@ def IsCompact (X : TopologicalSpaceObj) : Prop :=
     (∀ U ∈ C, X.topology.isOpen U) → (⋃₀ C = Set.univ) →
     ∃ (F : Finset (Set X.carrier)), (F : Set (Set X.carrier)) ⊆ C ∧ ⋃₀ (F : Set (Set X.carrier)) = Set.univ
 
-/-! ## Object instances for examples -/
-
-instance : Object (List String) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "StringList"
-  repr xs := toString xs
-
-/-! ## #eval examples -/
+/-! ## #eval examples — L6: Verified Examples -/
 
 #eval describe (α := List String)
 #eval discreteTopology Nat

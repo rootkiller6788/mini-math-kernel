@@ -125,17 +125,8 @@ def Context.fill (C : Context) (t : Term) : Term :=
 
 /-! ## Subterm Closure Properties -/
 
-/-- The subterm relation is decidable (via the boolean version). -/
-instance (s t : Term) : Decidable (Subterm s t) :=
-  if h : isSubterm s t then
-    isTrue (by
-      -- This is an axiom: we trust the boolean version matches the Prop version
-      axiom)
-  else
-    isFalse (by
-      intro hsub; apply h; clear h
-      -- By soundness of isSubterm
-      axiom)
+/-- The subterm relation is decidable. The instance is provided by `Core.Laws`. -/
+-- Decidable instance is in Core.Laws to avoid conflicts
 
 /-- Every term has itself as a subterm. -/
 theorem subterm_self (t : Term) : Subterm t t := Subterm.refl

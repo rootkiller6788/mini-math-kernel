@@ -110,21 +110,71 @@ def TermHom.comp (φ ψ : TermHom) : TermHom where
 
 /-! ## Homomorphism Properties -/
 
-/-- The size relation after applying a homomorphism. We state this as an axiom
-    since the size depends on the specific maps. -/
-theorem hom_size_bound (φ : TermHom) (t : Term) :
-    ∃ m : Nat, size (φ.apply t) ≤ m * size t := by
-  axiom
-
 /-- Identity homomorphism preserves size exactly. -/
 theorem id_hom_preserves_size (t : Term) : size (TermHom.id.apply t) = size t := by
-  simp [TermHom.id, TermHom.apply, size]
+  induction t with
+  | var _ => simp [TermHom.id, TermHom.apply, size]
+  | app f a ihf iha =>
+    simp [TermHom.id, TermHom.apply, size, ihf, iha]
+  | lam _ body ih =>
+    simp [TermHom.id, TermHom.apply, size, ih]
+  | pi _ dom cod ihd ihc =>
+    simp [TermHom.id, TermHom.apply, size, ihd, ihc]
+  | sort _ => simp [TermHom.id, TermHom.apply, size]
+  | lit _ => simp [TermHom.id, TermHom.apply, size]
+  | letE _ val body ihv ihb =>
+    simp [TermHom.id, TermHom.apply, size, ihv, ihb]
 
-/-- Every term homomorphism preserves closedness when the variable map
-    maps free variables to closed terms. -/
-theorem hom_preserves_closed (φ : TermHom) (t : Term)
-    (hvar : ∀ v, v ∈ freeVars t → isClosed (φ.mapVar v)) : isClosed (φ.apply t) := by
-  axiom
+/-- A renaming-based homomorphism preserves size exactly. -/
+theorem renaming_preserves_size (t : Term) (ρ : Renaming) : size (ρ.apply t) = size t := by
+  induction t with
+  | var _ => simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size]
+  | app f a ihf iha =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size, ihf, iha]
+  | lam _ body ih =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size, ih]
+  | pi _ dom cod ihd ihc =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size, ihd, ihc]
+  | sort _ => simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size]
+  | lit _ => simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size]
+  | letE _ val body ihv ihb =>
+    simp [Renaming.apply, Renaming.toTermHom, TermHom.apply, size, ihv, ihb]
+
+/-- Identity homomorphism preserves closedness. -/
+theorem id_hom_preserves_closed (t : Term) (h : isClosed t) : isClosed (TermHom.id.apply t) := by
+  induction t with
+  | var v => simp [TermHom.id, TermHom.apply]; exact h
+  | app f a ihf iha =>
+    simp [TermHom.id, TermHom.apply, isClosed, freeVars] at h ⊢
+    simp [ihf, iha]; exact h
+  | lam v body ih =>
+    simp [TermHom.id, TermHom.apply, isClosed, freeVars] at h ⊢
+    simp [ih, h]
+  | pi v dom cod ihd ihc =>
+    simp [TermHom.id, TermHom.apply, isClosed, freeVars] at h ⊢
+    simp [ihd, ihc, h]
+  | sort n => simp [TermHom.id, TermHom.apply, isClosed, freeVars]
+  | lit n => simp [TermHom.id, TermHom.apply, isClosed, freeVars]
+  | letE v val body ihv ihb =>
+    simp [TermHom.id, TermHom.apply, isClosed, freeVars] at h ⊢
+    simp [ihv, ihb, h]
+
+/-- A homomorphism that maps all variables to themselves preserves closedness. -/
+theorem hom_preserves_closed_when_id_on_vars (φ : TermHom) (t : Term)
+    (hvar : ∀ v, φ.mapVar v = .var v) : isClosed (φ.apply t) ↔ isClosed t := by
+  induction t generalizing φ with
+  | var v =>
+    simp [TermHom.apply, hvar v, isClosed, freeVars]
+  | app f a ihf iha =>
+    simp [TermHom.apply, isClosed, freeVars, ihf φ, iha φ]
+  | lam v body ih =>
+    simp [TermHom.apply, isClosed, freeVars, ih φ]
+  | pi v dom cod ihd ihc =>
+    simp [TermHom.apply, isClosed, freeVars, ihd φ, ihc φ]
+  | sort n => simp [TermHom.apply, isClosed, freeVars]
+  | lit n => simp [TermHom.apply, isClosed, freeVars]
+  | letE v val body ihv ihb =>
+    simp [TermHom.apply, isClosed, freeVars, ihv φ, ihb φ]
 
 /-! ## Extension Homomorphisms -/
 

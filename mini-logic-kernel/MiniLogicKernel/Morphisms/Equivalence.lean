@@ -3,40 +3,22 @@
 
 Logical equivalence relations, formula equivalence classes,
 and equivalence reasoning infrastructure.
+
+Knowledge coverage: L2 (Equivalence relations), L3 (Lindenbaum-Tarski algebra)
 -/
 
 import MiniLogicKernel.Core.Basic
 
 namespace MiniLogicKernel
 
-/-! ## Logical Equivalence
+/-! ## Additional Properties of Logical Equivalence
 
-Two formulas are logically equivalent if they evaluate to the same
-truth value under every Boolean assignment.
+The basic definitions (logEquiv, logEquiv_refl, logEquiv_symm, logEquiv_trans,
+logEquiv_iff_equiv_taut, not_logEquiv_not, and_logEquiv_and, or_logEquiv_or,
+impl_logEquiv_impl, Formula.setoid, EquivClass) are in Core/Basic.
+
+This file adds preservation properties and higher-level operations.
 -/
-
-def logEquiv (A B : Formula) : Prop :=
-  ∀ (a : Nat → Bool), A.eval a = B.eval a
-
-theorem logEquiv_refl (A : Formula) : logEquiv A A := by
-  intro a; rfl
-
-theorem logEquiv_symm {A B : Formula} (h : logEquiv A B) : logEquiv B A := by
-  intro a; rw [h a]
-
-theorem logEquiv_trans {A B C : Formula} (hAB : logEquiv A B) (hBC : logEquiv B C) : logEquiv A C := by
-  intro a; rw [hAB a, hBC a]
-
-theorem logEquiv_iff_equiv_taut (A B : Formula) : logEquiv A B ↔ isTautology (.equiv A B) := by
-  constructor
-  · intro h a
-    simp [Formula.eval, h a]
-  · intro h a
-    have h' := h a
-    simp [Formula.eval] at h'
-    have hA := Formula.eval A a
-    have hB := Formula.eval B a
-    exact Bool.eq_of_beq_eq_true h'
 
 theorem logEquiv_preserves_tautology {A B : Formula} (hEq : logEquiv A B) :
     isTautology A ↔ isTautology B := by
@@ -52,98 +34,99 @@ theorem logEquiv_preserves_satisfiability {A B : Formula} (hEq : logEquiv A B) :
   · intro ⟨a, h⟩; exact ⟨a, by rw [← hEq a, h]⟩
   · intro ⟨a, h⟩; exact ⟨a, by rw [hEq a, h]⟩
 
-theorem not_logEquiv_not {A B : Formula} (h : logEquiv A B) : logEquiv (.not A) (.not B) := by
-  intro a; simp [Formula.eval, h a]
-
-theorem and_logEquiv_and {A B C D : Formula} (hAB : logEquiv A B) (hCD : logEquiv C D) :
-    logEquiv (.and A C) (.and B D) := by
-  intro a; simp [Formula.eval, hAB a, hCD a]
-
-theorem or_logEquiv_or {A B C D : Formula} (hAB : logEquiv A B) (hCD : logEquiv C D) :
-    logEquiv (.or A C) (.or B D) := by
-  intro a; simp [Formula.eval, hAB a, hCD a]
-
-theorem impl_logEquiv_impl {A B C D : Formula} (hAB : logEquiv A B) (hCD : logEquiv C D) :
-    logEquiv (.impl A C) (.impl B D) := by
-  intro a; simp [Formula.eval, hAB a, hCD a]
-
-/-! ## Equivalence Classes
-
-The set of all formulas logically equivalent to a given formula.
--/
-
-def EquivClass (A : Formula) : Set Formula :=
-  {B | logEquiv A B}
-
-theorem EquivClass.mem_self (A : Formula) : A ∈ EquivClass A :=
-  logEquiv_refl A
-
-theorem EquivClass.ext {A B : Formula} (h : logEquiv A B) : EquivClass A = EquivClass B := by
-  ext C; constructor
-  · intro hAC; exact logEquiv_trans (logEquiv_symm h) hAC
-  · intro hBC; exact logEquiv_trans h hBC
+theorem logEquiv_preserves_unsatisfiability {A B : Formula} (hEq : logEquiv A B) :
+    isUnsatisfiable A ↔ isUnsatisfiable B := by
+  constructor
+  · intro h a
+    rw [← hEq a]; exact h a
+  · intro h a
+    rw [hEq a]; exact h a
 
 theorem EquivClass.mem_of_mem_equiv {A B C : Formula} (hAB : logEquiv A B) (hBC : B ∈ EquivClass C) :
     A ∈ EquivClass C :=
   logEquiv_trans (logEquiv_symm hAB) hBC
 
-/-! ## Setoid Instance
+/-! ## The FormulaQuot Type
 
-The logical equivalence relation forms a setoid on formulas, enabling
-quotient constructions.
+The quotient of formulas by logical equivalence (Lindenbaum-Tarski algebra).
+Uses the Setoid instance from Core/Basic.
 -/
 
-instance Formula.setoid : Setoid Formula where
-  r := logEquiv
-  iseqv := ⟨logEquiv_refl, logEquiv_symm, logEquiv_trans⟩
-
-/-- The quotient of formulas by logical equivalence (Lindenbaum-Tarski algebra). -/
 def FormulaQuot : Type := Quotient Formula.setoid
 
-def FormulaQuot.mk (f : Formula) : FormulaQuot :=
-  Quotient.mk Formula.setoid f
+namespace FormulaQuot
 
-def FormulaQuot.lift (f : Formula → α) (h : ∀ A B, logEquiv A B → f A = f B) : FormulaQuot → α :=
+def mk (f : Formula) : FormulaQuot := Quotient.mk _ f
+
+def lift (f : Formula → α) (h : ∀ A B, logEquiv A B → f A = f B) : FormulaQuot → α :=
   Quotient.lift f h
 
-/-! ## Operations on Equivalence Classes
+/-! ## Boolean Algebra Operations -/
 
-Logical connectives lift to the quotient, making it a Boolean algebra.
+def top : FormulaQuot := mk .true
+def bot : FormulaQuot := mk .false
+
+def not (x : FormulaQuot) : FormulaQuot :=
+  Quotient.liftOn x (λ A => mk (.not A))
+    (by intro A B h; apply Quotient.sound; exact not_logEquiv_not h)
+
+def and (x y : FormulaQuot) : FormulaQuot :=
+  Quotient.lift₂ (λ A B => mk (.and A B))
+    (by intro A1 A2 B1 B2 hA hB; apply Quotient.sound; exact and_logEquiv_and hA hB)
+    x y
+
+def or (x y : FormulaQuot) : FormulaQuot :=
+  Quotient.lift₂ (λ A B => mk (.or A B))
+    (by intro A1 A2 B1 B2 hA hB; apply Quotient.sound; exact or_logEquiv_or hA hB)
+    x y
+
+def impl (x y : FormulaQuot) : FormulaQuot :=
+  Quotient.lift₂ (λ A B => mk (.impl A B))
+    (by intro A1 A2 B1 B2 hA hB; apply Quotient.sound; exact impl_logEquiv_impl hA hB)
+    x y
+
+end FormulaQuot
+
+/-! ## Logical Strength Comparison
+
+Define a relation "A is at most as strong as B" meaning A → B is a tautology.
+This gives a preorder that becomes a partial order after quotienting.
 -/
 
-def FormulaQuot.top : FormulaQuot := FormulaQuot.mk .true
-def FormulaQuot.bot : FormulaQuot := FormulaQuot.mk .false
+def leStrength (A B : Formula) : Prop := isTautology (.impl A B)
 
-def FormulaQuot.not (x : FormulaQuot) : FormulaQuot :=
-  Quotient.liftOn x (λ A => FormulaQuot.mk (.not A))
-    (by
-      intro A B h
-      apply Quotient.sound
-      exact not_logEquiv_not h)
+theorem leStrength_refl (A : Formula) : leStrength A A := by
+  intro a; simp [Formula.eval]
 
-def FormulaQuot.and (x y : FormulaQuot) : FormulaQuot :=
-  Quotient.lift₂ (λ A B => FormulaQuot.mk (.and A B))
-    (by
-      intro A1 A2 B1 B2 hA hB
-      apply Quotient.sound
-      exact and_logEquiv_and hA hB)
-    x y
+theorem leStrength_trans {A B C : Formula} (hAB : leStrength A B) (hBC : leStrength B C) :
+    leStrength A C := by
+  intro a; have haB := hAB a; have hbC := hBC a
+  simp [Formula.eval] at haB hbC ⊢
+  cases h : A.eval a
+  · simp [Formula.eval, h]
+  · simp [Formula.eval, h] at haB ⊢; exact hbC
 
-def FormulaQuot.or (x y : FormulaQuot) : FormulaQuot :=
-  Quotient.lift₂ (λ A B => FormulaQuot.mk (.or A B))
-    (by
-      intro A1 A2 B1 B2 hA hB
-      apply Quotient.sound
-      exact or_logEquiv_or hA hB)
-    x y
+theorem leStrength_antisymm_equiv {A B : Formula} (hAB : leStrength A B) (hBA : leStrength B A) :
+    logEquiv A B := by
+  intro a
+  have hABa := hAB a; have hBAa := hBA a
+  simp [Formula.eval] at hABa hBAa
+  cases hA : A.eval a
+  · simp [Formula.eval, hA]; exact hBAa
+  · simp [Formula.eval, hA] at hABa; exact hABa
 
-def FormulaQuot.impl (x y : FormulaQuot) : FormulaQuot :=
-  Quotient.lift₂ (λ A B => FormulaQuot.mk (.impl A B))
-    (by
-      intro A1 A2 B1 B2 hA hB
-      apply Quotient.sound
-      exact impl_logEquiv_impl hA hB)
-    x y
+theorem leStrength_impl_iff (A B : Formula) : leStrength A B ↔ logEquiv (.impl A B) .true := by
+  constructor
+  · intro h a; simp [logEquiv, Formula.eval, h a]
+  · intro h a; have ha := h a; simp [logEquiv, Formula.eval] at ha; exact ha
+
+/-! ## Substitution Preserving Equivalence -/
+
+theorem logEquiv_subst {A B : Formula} (hEq : logEquiv A B) (n : Nat) (g : Formula) :
+    logEquiv (A.subst n g) (B.subst n g) := by
+  intro a
+  rw [Formula.eval_subst A n g a, Formula.eval_subst B n g a]
+  apply hEq
 
 /-! ## #eval Examples -/
 
@@ -152,20 +135,15 @@ def A1 : Formula := .atom 1
 def formA : Formula := .and A0 A1
 def formB : Formula := .not (.or (.not A0) (.not A1))
 
--- Check that De Morgan duals agree on concrete assignments
 #eval formA.eval (λ _ => true)
 #eval formB.eval (λ _ => true)
 #eval formA.eval (λ n => n == 0)
 #eval formB.eval (λ n => n == 0)
 
--- Check equivalence by evaluating under specific assignments
--- Equivalent formulas have the same truth value under every assignment
 #eval (.equiv formA formB).eval (λ _ => true)
 #eval (.equiv formA formB).eval (λ n => n == 0)
 #eval (.equiv formA formB).eval (λ n => n == 1)
 
--- Tautology check via universal quantifier over small domains
--- (excluded middle is true under all assignments)
 #eval (.or A0 (.not A0)).eval (λ _ => true)
 #eval (.or A0 (.not A0)).eval (λ _ => false)
 #eval (.or A0 (.not A0)).eval (λ n => n % 2 == 0)

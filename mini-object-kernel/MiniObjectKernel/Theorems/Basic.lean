@@ -104,17 +104,7 @@ The cardinality of an object is invariant under isomorphism. -/
 axiom isomorphy_same_cardinality {α β : Type u} [Object α] [Object β]
     (i : Iso α β) : True
 
-/-! ## Simple Object instances for examples -/
-
-instance : Object Nat where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object (List Char) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "String"
-  repr cs := String.mk cs
+/-! ## Object instances for examples — uses canonical instances from Core.Basic -/
 
 /-- Example isomorphism: id on Nat. -/
 def natIdIso : Iso Nat Nat := Iso.id Nat

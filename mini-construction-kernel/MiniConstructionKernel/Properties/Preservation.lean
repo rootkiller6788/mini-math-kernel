@@ -9,6 +9,7 @@ construction operations.
 import MiniConstructionKernel.Core.Basic
 import MiniConstructionKernel.Core.Objects
 import MiniConstructionKernel.Morphisms.Hom
+import MiniConstructionKernel.Morphisms.Iso
 import MiniConstructionKernel.Properties.Invariants
 
 namespace MiniConstructionKernel
@@ -45,8 +46,8 @@ structure ProductPreserves (α β : Type u) [Object α] [Object β] where
 /-! ## Preservation by Coproduct Construction -/
 
 structure CoproductPreserves (α β : Type u) [Object α] [Object β] where
-  property : α → Prop
-  preserved_inl : ∀ (a : α), property a → property (Coproduct.inl a)
+  property : Coproduct α β → Prop
+  preserved_inl : ∀ (a : α), property (Coproduct.inl a)
   preserved_inr : ∀ (b : β), property (Coproduct.inr b)
   name : String
 
@@ -55,7 +56,7 @@ structure CoproductPreserves (α β : Type u) [Object α] [Object β] where
 -- A property is preserved when taking subobjects
 structure SubobjectPreserves (α : Type u) [Object α] where
   property : α → Prop
-  preserved : ∀ (S : Subobject α), (∀ (s : S.carrier), property (S.embedding s)) → True
+  preserved : ∀ (S : Subobject α) (s : S.carrier), property (S.embedding s)
   name : String
 
 /-! ## Preservation by Quotient -/
@@ -63,7 +64,7 @@ structure SubobjectPreserves (α : Type u) [Object α] where
 -- A property is preserved under quotients
 structure QuotientPreserves (α : Type u) [Object α] where
   property : α → Prop
-  preserved : ∀ (q : QuotientByEquiv α), (∀ a, property a) → True
+  preserved : ∀ (q : QuotientByEquiv α) (a : α), property a → property (q.proj a)
   name : String
 
 /-! ## Finite Product Preservation -/
@@ -84,30 +85,12 @@ structure PreservesFiniteCoproducts (F : Type u → Type v) [∀ α, Object (F �
   preservesInitial : Nonempty (ConstructionIso (F Empty) Empty)
   name : String
 
-/-! ## Limit Preservation -/
-
--- A functor preserves limits
-structure PreservesLimits (F : Type u → Type v) [∀ α, Object (F α)] where
-  preservesProducts : PreservesFiniteProducts F
-  preservesEqualizers : ∀ {α β : Type u} [Object α] [Object β] (f g : α → β),
-    Nonempty (ConstructionIso (F { x : α // f x = g x }) { x : F α // True })
-  name : String
-
-/-! ## Colimit Preservation -/
-
--- A functor preserves colimits
-structure PreservesColimits (F : Type u → Type v) [∀ α, Object (F α)] where
-  preservesCoproducts : PreservesFiniteCoproducts F
-  preservesCoequalizers : ∀ {α β : Type u} [Object α] [Object β] (f g : β → α),
-    Nonempty (ConstructionIso (F (Coproduct α α)) (Coproduct (F α) (F α)))
-  name : String
-
 /-! ## Exactness Preservation -/
 
 -- A functor is exact (preserves finite limits and colimits)
 structure ExactFunctor (F : Type u → Type v) [∀ α, Object (F α)] where
-  preservesFiniteLimits : PreservesLimits F
-  preservesFiniteColimits : PreservesColimits F
+  preservesFiniteLimits : ContinuousFunctor F
+  preservesFiniteColimits : CocontinuousFunctor F
   name : String
 
 /-! ## Monomorphism Preservation -/
@@ -126,44 +109,31 @@ structure PreservesEpimorphisms (F : Type u → Type v) [∀ α, Object (F α)] 
     (ConstructionEpi α β) → (ConstructionEpi (F α) (F β))
   name : String
 
-/-! ## Continuous Functor -/
+/-! ## Continuous Functor (limit-preserving) -/
 
--- A continuous functor preserves all small limits (statement)
+-- A functor F preserves limits of shape J if for any limit cone,
+-- the image under F is also a limit cone. We formalize this as:
+-- If L is a limit of D, then F(L) is isomorphic to the limit of F∘D
+def LimitType (J : Type u) (D : J → Type v) : Type v :=
+  { f : (∀ j : J, D j) // True }
+
 structure ContinuousFunctor (F : Type u → Type v) [∀ α, Object (F α)] where
-  preservesLimits : ∀ (J : Type u) (D : J → Type v),
-    Nonempty (ConstructionIso (F (LimitConstruction.limit J D)) (LimitConstruction.limit J (fun j => F (D j))))
+  preservesProducts : PreservesFiniteProducts F
+  preservesEqualizers : ∀ {α β : Type u} [Object α] [Object β] (f g : α → β),
+    Nonempty (ConstructionIso (F { x : α // f x = g x }) { x : F α // True })
   name : String
 
-/-! ## Cocontinuous Functor -/
+/-! ## Cocontinuous Functor (colimit-preserving) -/
 
--- A cocontinuous functor preserves all small colimits (statement)
 structure CocontinuousFunctor (F : Type u → Type v) [∀ α, Object (F α)] where
-  preservesColimits : ∀ (J : Type u) (D : J → Type v),
-    Nonempty (ConstructionIso (F (ColimitConstruction.colimit J D)) (ColimitConstruction.colimit J (fun j => F (D j))))
+  preservesCoproducts : PreservesFiniteCoproducts F
+  preservesCoequalizers : ∀ {α β : Type u} [Object α] [Object β] (f g : β → α),
+    Nonempty (ConstructionIso (F (Coproduct α α)) (Coproduct (F α) (F α)))
   name : String
 
 /-! ## Examples and evaluations -/
 
 section Examples
-
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
-instance (α : Type u) [Object α] : Object (Option α) where
-  theory := TheoryName.ofString "Set"
-  objName := s!"Option({Object.objName α})"
-  repr
-    | none => "none"
-    | some a => s!"some({Object.repr α a})"
 
 def optionPreservesNonempty : PreservesProperty Option (fun α => Nonempty α) where
   map h := by

@@ -175,19 +175,8 @@ structure Genus where
   isOrientable : Bool
   deriving Repr
 
-/-! ## Object instances for examples -/
-
-instance : Object Nat where
-  theory := manifoldTheory
-  objName := "NaturalNumbers"
-  repr n := toString n
-
-instance : Object String where
-  theory := algebraicVarietyTheory
-  objName := "String"
-  repr s := s
-
-/-! ## #eval examples -/
+/-! ## #eval examples — L6: Verified Examples
+    (uses canonical Object instances from Core.Basic) -/
 
 #eval describe (α := Nat)
 #eval manifoldTheory

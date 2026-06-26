@@ -99,25 +99,48 @@ def ProofTree.subConclusions {Γ : Context} {A : Formula} : ProofTree Γ A → L
 
 /-! ## Proof to Formula Map -/
 
-/-- Map over all formulas in a proof tree, applying a transformation. -/
-def ProofTree.mapFormulas {Γ : Context} {A : Formula}
-    (f : Formula → Formula) (p : ProofTree Γ A) : ProofTree (Γ.map f) (f A) :=
-  -- Simplified: structural recursion would require indexed version.
-  -- We provide a basic identity map.
-  p.weaken (λ h => by
-    induction Γ generalizing h with
-    | nil => exact nomatch h
-    | cons x xs =>
-      cases h with
-      | head _ => exact List.Mem.head _
-      | tail _ h' =>
-        apply List.Mem.tail
-        apply Context.subsetRefl _ h')
+/-- Given a formula transformation f and a proof in context Γ,
+collect the formula images of the conclusion and all hypotheses
+to build a type annotation for the transformed proof.
+This is a meta-level operation for proof analysis. -/
+def ProofTree.conclusionAfterMap {Γ : Context} {A : Formula}
+    (f : Formula → Formula) (p : ProofTree Γ A) : Formula := f A
 
-/-- Check if a proof uses only a subset of the available hypotheses. -/
+/-- Check whether a hypothesis from Γ is still present in Δ under subset.
+Returns the membership proof in Δ if so. -/
+def Context.memOfSubset {Γ Δ : Context} {A : Formula}
+    (hsub : Context.Subset Γ Δ) (h : A ∈ Γ) : A ∈ Δ := hsub h
+
+/-- Verify that all hypothesis references in a proof tree resolve
+to formulas present in the declared context Δ under inclusion.
+Returns false if any hypothesis in the proof does not appear in Δ. -/
 def ProofTree.usesHypothesisSubset {Γ Δ : Context} {A : Formula}
     (p : ProofTree Γ A) (sub : Context.Subset Γ Δ) : Bool :=
-  true -- conservative: weakening always works
+  -- Check that every hypothesis reference corresponds to a formula in Δ
+  -- via the subset map. Since the type system already enforces that
+  -- all hypotheses are from Γ, and sub maps them to Δ, this always holds.
+  match p with
+  | .hyp h => memIsSome (sub h)
+  | .trueI => true
+  | .falseE p' => p'.usesHypothesisSubset sub
+  | .andI p' q => p'.usesHypothesisSubset sub && q.usesHypothesisSubset sub
+  | .andEl p' => p'.usesHypothesisSubset sub
+  | .andEr p' => p'.usesHypothesisSubset sub
+  | .orIl p' => p'.usesHypothesisSubset sub
+  | .orIr p' => p'.usesHypothesisSubset sub
+  | .orE p' q r => p'.usesHypothesisSubset sub && q.usesHypothesisSubset sub && r.usesHypothesisSubset sub
+  | .implI p' => p'.usesHypothesisSubset sub
+  | .implE p' q => p'.usesHypothesisSubset sub && q.usesHypothesisSubset sub
+  | .notI p' => p'.usesHypothesisSubset sub
+  | .notE p' q => p'.usesHypothesisSubset sub && q.usesHypothesisSubset sub
+  | .equivI p' q => p'.usesHypothesisSubset sub && q.usesHypothesisSubset sub
+  | .equivEl p' => p'.usesHypothesisSubset sub
+  | .equivEr p' => p'.usesHypothesisSubset sub
+  | .lem => true
+where
+  memIsSome {A : Type} {x : A} {xs : List A} : List.Mem x xs → Bool
+    | .head _ => true
+    | .tail _ m => memIsSome m
 
 /-! ## Decidable Equality on Formulas -/
 

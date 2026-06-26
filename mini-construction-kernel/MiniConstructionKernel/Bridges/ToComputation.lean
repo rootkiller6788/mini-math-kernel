@@ -13,25 +13,6 @@ import MiniConstructionKernel.Constructions.Quotients
 
 namespace MiniConstructionKernel
 
-open MiniObjectKernel
-
-/-! ## Object instances -/
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
-
 /-! ## Algebraic Data Type as Coproduct -/
 
 /-- An algebraic data type `data Option a = None | Some a` is a coproduct. -/
@@ -79,13 +60,6 @@ structure MonadConstruction (M : Type u → Type u) [∀ α, Object (M α)] wher
     (m : M α) (f : α → M β) (g : β → M γ),
     bind (bind m f) g = bind m (fun a => bind (f a) g)
   name : String
-
-instance (α : Type u) [Object α] : Object (Option α) where
-  theory := TheoryName.ofString "Set"
-  objName := s!"Option({describe α})"
-  repr
-    | none => "None"
-    | some a => s!"Some({repr a})"
 
 def optionMonad : MonadConstruction Option where
   pure a := some a
@@ -142,13 +116,6 @@ inductive Tree (α : Type u) : Type u
   | leaf : Tree α
   | node : Tree α → α → Tree α → Tree α
   deriving Inhabited
-
-instance (α : Type u) [Object α] : Object (Tree α) where
-  theory := TheoryName.ofString "Set"
-  objName := s!"Tree({describe α})"
-  repr
-    | Tree.leaf => "Leaf"
-    | Tree.node l a r => s!"Node({repr l},{repr a},{repr r})"
 
 def treeAsConstruction (α : Type u) [Object α] : Construction Unit (fun _ => α) (Tree α) :=
   { build := Tree.leaf

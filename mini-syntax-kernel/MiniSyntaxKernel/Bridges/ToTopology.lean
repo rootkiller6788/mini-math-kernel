@@ -119,10 +119,24 @@ theorem iso_is_homeomorphism (t₁ t₂ : Term) (h : structEq t₁ t₂) :
     cases t₂ with
     | lit m => simp [positions]
     | _ => simp [structEq] at h
-  | _ =>
-    -- For lam, pi, letE: the positions are determined by structEq
-    -- through the binder depth. The full proof is structural.
-    axiom
+  | lam v1 b1 ih =>
+    cases t₂ with
+    | lam v2 b2 =>
+      simp [structEq] at h
+      simp [positions, ih b2 h]
+    | _ => simp [structEq] at h
+  | pi v1 d1 c1 ihd ihc =>
+    cases t₂ with
+    | pi v2 d2 c2 =>
+      simp [structEq] at h; rcases h with ⟨hd, hc⟩
+      simp [positions, ihd d2 hd, ihc c2 hc]
+    | _ => simp [structEq] at h
+  | letE v1 t1 b1 iht ihb =>
+    cases t₂ with
+    | letE v2 t2 b2 =>
+      simp [structEq] at h; rcases h with ⟨ht, hb⟩
+      simp [positions, iht t2 ht, ihb b2 hb]
+    | _ => simp [structEq] at h
 
 /-! ## #eval Examples -/
 

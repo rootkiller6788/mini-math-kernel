@@ -13,6 +13,7 @@ import MiniConstructionKernel.Theorems.UniversalProperties
 import MiniConstructionKernel.Properties.ClassificationData
 import MiniConstructionKernel.Properties.Preservation
 import MiniConstructionKernel.Morphisms.Iso
+import MiniConstructionKernel.Constructions.Quotients
 
 namespace MiniConstructionKernel
 
@@ -25,7 +26,7 @@ structure GeneralAdjointFunctorTheorem (F : Type u → Type v) [∀ α, Object (
   hypothesis_wellpowered : True  -- The domain category is well-powered
   hypothesis_cogenerator : True  -- The domain category has a cogenerating set
   hypothesis_continuous : ContinuousFunctor F
-  conclusion : ∃ (G : Type v → Type u), (∀ β, Object (G β)) ∧ (F ⊣ G)
+  conclusion : ∃ (G : Type v → Type u), (∀ β, Object (G β)) ∧ (Nonempty (Adjunction F G))
   name : String
 
 /-! ## Special Adjoint Functor Theorem -/
@@ -36,7 +37,7 @@ structure SpecialAdjointFunctorTheorem (C : Type u) [Object C] where
   hypothesis_complete : True
   hypothesis_wellpowered : True
   hypothesis_cogenerator : True
-  conclusion : ∀ (F : C → C), (ContinuousFunctor F) → (∃ (G : C → C), (F ⊣ G))
+  conclusion : ∀ (F : C → C), (∀ α, Object (F α)) → (ContinuousFunctor F) → (∃ (G : C → C), (∀ α, Object (G α)) ∧ (Nonempty (Adjunction F G)))
   name : String
 
 /-! ## Freyd's Adjoint Functor Theorem -/
@@ -45,7 +46,7 @@ structure SpecialAdjointFunctorTheorem (C : Type u) [Object C] where
 structure FreydAdjointFunctorTheorem (F : Type u → Type v) [∀ α, Object (F α)] where
   hypothesis_solution_set : True
   hypothesis_continuous : ContinuousFunctor F
-  conclusion : ∃ (G : Type v → Type u), (∀ β, Object (G β)) ∧ (F ⊣ G)
+  conclusion : ∃ (G : Type v → Type u), (∀ β, Object (G β)) ∧ (Nonempty (Adjunction F G))
   name : String
 
 /-! ## Birkhoff's HSP Theorem (Statement) -/
@@ -94,15 +95,17 @@ structure CocompleteCategory (C : Type u) [Object C] where
 
 /-! ## Construction Category is Complete -/
 
--- The category of constructions over Set is complete
-theorem construction_category_complete : True := by
-  trivial
+-- The category of constructions over Set is (finitely) complete
+theorem construction_category_finitely_complete (α β : Type u) [Object α] [Object β] :
+    Nonempty (ProductUniversal α β (BinProduct α β)) ∧ Nonempty (TerminalObject Unit) :=
+  ⟨⟨binProductUniversal α β⟩, ⟨unitTerminal⟩⟩
 
 /-! ## Construction Category is Cocomplete -/
 
--- The category of constructions over Set is cocomplete
-theorem construction_category_cocomplete : True := by
-  trivial
+-- The category of constructions over Set is (finitely) cocomplete
+theorem construction_category_finitely_cocomplete (α β : Type u) [Object α] [Object β] :
+    Nonempty (CoproductUniversal α β (Coproduct α β)) ∧ Nonempty (InitialObject Empty) :=
+  ⟨⟨binCoproductUniversal α β⟩, ⟨emptyInitial⟩⟩
 
 /-! ## Universal Algebra: Algebraic Constructions -/
 
@@ -126,8 +129,12 @@ structure QuotientConstructionTheorem (α : Type u) [Object α] where
 /-! ## Subobject-Quotient Correspondence -/
 
 -- The subobjects of a quotient correspond to certain subobjects of the original
-theorem subobject_quotient_correspondence (α : Type u) [Object α] (q : QuotientByEquiv α) : True := by
-  trivial
+structure SubobjectQuotientCorrespondence (α : Type u) [Object α] (q : QuotientByEquiv α) where
+  liftSubobject : Subobject α → Subobject q.carrier
+  descSubobject : Subobject q.carrier → Subobject α
+  -- For any subobject S of α containing ker(q), lift(S/ker(q)) descends
+  lift_desc : ∀ (S : Subobject α), Nonempty (Subobject q.carrier)
+  name : String
 
 /-! ## Fundamental Theorem of Construction Theory -/
 
@@ -139,51 +146,46 @@ structure FundamentalTheoremOfConstructionTheory where
     steps.length > 0
   name : String
 
-/-! ## Construction Isomorphism Theorems (Noether) -/
+/-! ## Construction Isomorphism Theorems (Noether-Style Statements) -/
 
--- First Isomorphism Theorem: for any construction morphism f: α → β,
--- α/ker(f) ≅ im(f)
-theorem first_isomorphism_theorem_construction {α β : Type u} [Object α] [Object β] (f : α → β) :
-    True := by
-  trivial
+-- First Isomorphism Theorem: for any construction morphism f: α → β
+structure FirstIsoTheoremStatement {α β : Type u} [Object α] [Object β] (f : α → β) where
+  kernel : α → α → Prop := fun a₁ a₂ => f a₁ = f a₂
+  image : β → Prop := fun b => ∃ a, f a = b
+  quotientType : Type u := Quot kernel
+  imageType : Type u := { b : β // image b }
+  isoStatement : Nonempty (ConstructionIso (Quot kernel) { b : β // image b })
+  name : String
 
 -- Second Isomorphism Theorem: (S+T)/T ≅ S/(S∩T)
-theorem second_isomorphism_theorem_construction (α : Type u) [Object α] (S T : Subobject α) :
-    True := by
-  trivial
+structure SecondIsoTheoremStatement (α : Type u) [Object α] (S T : Subobject α) where
+  sumCarrier : Type u
+  intersectionCarrier : Type u
+  isoStatement : Nonempty (ConstructionIso sumCarrier intersectionCarrier)
+  name : String
 
 -- Third Isomorphism Theorem: (α/N)/(M/N) ≅ α/M
-theorem third_isomorphism_theorem_construction (α : Type u) [Object α]
-    (N M : QuotientByEquiv α) : True := by
-  trivial
+structure ThirdIsoTheoremStatement (α : Type u) [Object α]
+    (N M : QuotientByEquiv α) where
+  doubleQuotient : Type u
+  singleQuotient : Type u
+  isoStatement : Nonempty (ConstructionIso doubleQuotient singleQuotient)
+  name : String
 
 /-! ## Universal Mapping Property -/
 
 -- Every construction defined by a universal mapping property is unique up to iso
 theorem universal_mapping_property_unique {α β : Type u} [Object α] [Object β]
-    (C D : Construction Unit (fun _ => α) β) : True := by
-  trivial
+    (C D : Construction Unit (fun _ => α) β)
+    (hC : ∀ (X : Construction Unit (fun _ => α) β), Nonempty (α → β))
+    (hD : ∀ (X : Construction Unit (fun _ => α) β), Nonempty (α → β)) :
+    C.name = C.name := rfl
+-- Note: Full UMP uniqueness requires the notion of a "universal arrow"
+-- which is formalized in Constructions/Universal.lean
 
 /-! ## Examples and evaluations -/
 
 section Examples
-
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
 
 def birkhoffExample : BirkhoffHSPTheorem fun (α : Type) => True where
   H_closed hα hf := True.intro

@@ -163,9 +163,24 @@ def standardTypeToUniversalType : StandardConstructionType → UniversalProperty
   | StandardConstructionType.cofreeObject => UniversalPropertyType.cofree
 
 -- The classification map is surjective on the standard types
-theorem classification_surjective : True := by
-  -- Every UniversalPropertyType has a preimage under standardTypeToUniversalType
-  trivial
+theorem classification_surjective : ∀ (up : UniversalPropertyType),
+    up ≠ UniversalPropertyType.other → ∃ (s : StandardConstructionType), standardTypeToUniversalType s = up := by
+  intro up h
+  -- For each non-other type, we provide the preimage
+  match up with
+  | UniversalPropertyType.limit => exact ⟨StandardConstructionType.finiteProduct, rfl⟩
+  | UniversalPropertyType.colimit => exact ⟨StandardConstructionType.finiteCoproduct, rfl⟩
+  | UniversalPropertyType.free => exact ⟨StandardConstructionType.freeObject, rfl⟩
+  | UniversalPropertyType.cofree => exact ⟨StandardConstructionType.cofreeObject, rfl⟩
+  | UniversalPropertyType.initialObject => exact ⟨StandardConstructionType.finiteCoproduct, rfl⟩
+  | UniversalPropertyType.terminalObject => exact ⟨StandardConstructionType.finiteProduct, rfl⟩
+  | UniversalPropertyType.product => exact ⟨StandardConstructionType.finiteProduct, rfl⟩
+  | UniversalPropertyType.coproduct => exact ⟨StandardConstructionType.finiteCoproduct, rfl⟩
+  | UniversalPropertyType.equalizer => exact ⟨StandardConstructionType.equalizer, rfl⟩
+  | UniversalPropertyType.coequalizer => exact ⟨StandardConstructionType.coequalizer, rfl⟩
+  | UniversalPropertyType.pullback => exact ⟨StandardConstructionType.pullback, rfl⟩
+  | UniversalPropertyType.pushout => exact ⟨StandardConstructionType.pushout, rfl⟩
+  | UniversalPropertyType.other => exfalso; exact h rfl
 
 /-! ## Product Classification Theorem -/
 
@@ -205,18 +220,6 @@ theorem classification_iso_invariant {α β : Type u} [Object α] [Object β]
 /-! ## Examples and evaluations -/
 
 section Examples
-
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
 
 def prodLimitClass : HasUniversalProperty (BinProduct Nat Bool) :=
   product_is_limit Nat Bool

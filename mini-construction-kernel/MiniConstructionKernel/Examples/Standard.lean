@@ -16,26 +16,7 @@ import MiniConstructionKernel.Morphisms.Iso
 
 namespace MiniConstructionKernel
 
-open MiniObjectKernel
-
-/-! ## Object instances for examples -/
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
 /-! ## Free Monoid (List) -/
-
-instance {α : Type u} [Object α] : Object (List α) where
-  theory := TheoryName.ofString "Monoid"
-  objName := s!"FreeMonoid({describe α})"
-  repr l := repr l
 
 def freeMonoidConstruction (α : Type u) [Object α] : FreeConstruction List where
   unit a := [a]
@@ -50,11 +31,6 @@ def freeMonoidConstruction (α : Type u) [Object α] : FreeConstruction List whe
 /-! ## Product of Sets -/
 
 abbrev SetProduct (α β : Type u) [Object α] [Object β] : Type u := BinProduct α β
-
-instance {α β : Type u} [Object α] [Object β] : Object (SetProduct α β) where
-  theory := TheoryName.ofString "Set"
-  objName := s!"{describe α}×{describe β}"
-  repr p := s!"({Object.repr α p.fst}, {Object.repr β p.snd})"
 
 def setProductConstruction (α β : Type u) [Object α] [Object β] :
     ProductConstruction (Fin 2) fun | 0 => α | 1 => β := buildProduct α β
@@ -92,14 +68,6 @@ inductive TensorProduct (α β : Type u) : Type u where
   | add : TensorProduct α β → TensorProduct α β → TensorProduct α β
   deriving Inhabited
 
-instance {α β : Type u} [Object α] [Object β] : Object (TensorProduct α β) where
-  theory := TheoryName.ofString "Module"
-  objName := s!"{describe α}⊗{describe β}"
-  repr
-    | .pure a b => s!"({Object.repr α a}⊗{Object.repr β b})"
-    | .zero => "0"
-    | .add t1 t2 => s!"({repr t1}+{repr t2})"
-
 def tensorProductConstruction (α β : Type u) [Object α] [Object β] :
     Construction Unit (fun _ => α) (TensorProduct α β) :=
   { build := TensorProduct.zero, name := s!"TensorProduct({describe α},{describe β})" }
@@ -112,15 +80,6 @@ inductive PolynomialExpr (α : Type u) : Type u where
   | add : PolynomialExpr α → PolynomialExpr α → PolynomialExpr α
   | mul : PolynomialExpr α → PolynomialExpr α → PolynomialExpr α
   deriving Inhabited
-
-instance {α : Type u} [Object α] : Object (PolynomialExpr α) where
-  theory := TheoryName.ofString "CommRing"
-  objName := s!"Poly({describe α})"
-  repr
-    | .const n => toString n
-    | .var a => s!"X_({Object.repr α a})"
-    | .add p q => s!"({repr p}+{repr q})"
-    | .mul p q => s!"({repr p})·({repr q})"
 
 def polynomialConstruction (α : Type u) [Object α] :
     Construction Unit (fun _ => α) (PolynomialExpr α) :=

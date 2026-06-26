@@ -90,17 +90,9 @@ theorem soundness (f : Formula) (h : Derivable f) : isTautology f := by
 The deduction theorem: if a formula B is derivable from assumptions
 Γ ∪ {A}, then A → B is derivable from Γ alone.
 The standard proof proceeds by induction on the derivation of B.
+
+(NOTE: `isSatisfiableSet` and `semanticallyImplies` are defined in Core/Basic)
 -/
-
-/-- A set of formulas is satisfiable if there exists a single assignment
-making every formula in the set true. -/
-def isSatisfiableSet (Γ : Set Formula) : Prop :=
-  ∃ (σ : Nat → Bool), ∀ f ∈ Γ, f.eval σ = true
-
-/-- Semantic implication: Γ semantically implies f if every assignment
-satisfying all formulas in Γ also satisfies f. -/
-def semanticallyImplies (Γ : Set Formula) (f : Formula) : Prop :=
-  ∀ (σ : Nat → Bool), (∀ g ∈ Γ, g.eval σ = true) → f.eval σ = true
 
 /--
 The deduction theorem for the semantic side:

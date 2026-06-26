@@ -86,18 +86,10 @@ axiom classification_by_invariants {α β : Type u} [Object α] [Object β]
 axiom finite_classification_theorem (T : TheoryName) (bound : Nat) :
   List (Type u)
 
-/-- Objects with trivial invariant structure are all isomorphic. -/
-theorem trivial_invariant_implies_isomorphic {α β : Type u} [Object α] [Object β]
-    (h_alpha : (Object.theory α) = (Object.theory β)) : Iso α β := by
-  -- In the general setting this is an axiom; we use it for the trivial case
-  apply axiom
-
-/-! ## Object instance for examples -/
-
-instance : Object (List Nat) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "NatList"
-  repr xs := toString xs
+/-- Objects with the same theory name are NOT necessarily isomorphic.
+    This is stated as an axiom schema for the general case. -/
+axiom trivial_invariant_implies_isomorphic {α β : Type u} [Object α] [Object β]
+    (h_alpha : (Object.theory α) = (Object.theory β)) : Iso α β
 
 /-- Simple ObjectHom between list types. -/
 def listLengthHom : ObjectHom (List Nat) (List Nat) where

@@ -26,6 +26,7 @@ import MiniAxiomKernel.Theorems.Soundness
 import MiniAxiomKernel.Theorems.Deduction
 import MiniAxiomKernel.Theorems.Compactness
 import MiniAxiomKernel.Theorems.CompletenessTheorem
+import MiniAxiomKernel.Theorems.MetaProperties
 
 import MiniAxiomKernel.Examples.Peano
 import MiniAxiomKernel.Examples.GroupTheory
@@ -34,5 +35,10 @@ import MiniAxiomKernel.Examples.SetTheory
 import MiniAxiomKernel.Bridges.ToLogic
 import MiniAxiomKernel.Bridges.ToProof
 import MiniAxiomKernel.Bridges.ToModel
+
+import MiniAxiomKernel.Applications.KnowledgeRepresentation
+
+import MiniAxiomKernel.Advanced.FiniteModelTheory
+import MiniAxiomKernel.Advanced.HomotopyLevel
 
 import MiniAxiomKernel.Benchmark.Basic

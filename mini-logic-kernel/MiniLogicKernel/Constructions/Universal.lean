@@ -10,20 +10,6 @@ import MiniLogicKernel.Core.Objects
 
 namespace MiniLogicKernel
 
-/-! ## Helper: List Operations -/
-
-/-- Check if all elements of a list satisfy a predicate. -/
-def listAll {α : Type} (l : List α) (p : α → Bool) : Bool :=
-  match l with
-  | [] => true
-  | x :: xs => p x && listAll xs p
-
-/-- Check if any element of a list satisfies a predicate. -/
-def listAny {α : Type} (l : List α) (p : α → Bool) : Bool :=
-  match l with
-  | [] => false
-  | x :: xs => p x || listAny xs p
-
 /-! ## Free Boolean Algebra on Generators -/
 
 /-- The set of generators for a free Boolean algebra on n atoms:

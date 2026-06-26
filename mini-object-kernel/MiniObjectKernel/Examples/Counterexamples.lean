@@ -56,7 +56,7 @@ def IsObjEpi {α β : Type u} [Object α] [Object β] (f : α → β) : Prop :=
 axiom nonsurjective_epi_exists : ∃ (α β : Type u) [Object α] [Object β],
   ∃ (f : α → β), IsObjEpi f ∧ ¬ (∀ y, ∃ x, f x = y)
 
-/-! ## Counterexample 4: Product is not always Cartesian
+/-! ## Counterexample 4: Product is not always Cartesian — L6
 
 In the category of objects, the product structure need not
 coincide with the Cartesian product of underlying types when
@@ -69,17 +69,12 @@ structure CoherentSet where
   coherence : elements ≠ [0, 1]
   deriving Repr
 
-instance : Object (List String) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "StringList"
-  repr xs := toString xs
-
 instance : Object CoherentSet where
   theory := TheoryName.ofString "CoherentTheory"
   objName := "CoherentSet"
   repr cs := s!"Coh({cs.elements})"
 
-  /-- The product of two coherent sets (as types) does NOT
+/-- The product of two coherent sets (as types) does NOT
     satisfy the coherence condition in general. -/
 def productOfCoherentSets (cs1 cs2 : CoherentSet) : List Nat × List Nat :=
   (cs1.elements, cs2.elements)
@@ -88,20 +83,11 @@ def productOfCoherentSets (cs1 cs2 : CoherentSet) : List Nat × List Nat :=
 def coherentSet1 : CoherentSet := { elements := [0], coherence := by intro h; cases h }
 def coherentSet2 : CoherentSet := { elements := [1], coherence := by intro h; cases h }
 
--- The product of their elements is ([0], [1]) which is fine;
--- but the product type doesn't carry the coherence condition.
-
-/-! ## Counterexample 5: Not every invariant classifies completely
+/-! ## Counterexample 5: Not every invariant classifies completely — L6
 
 Invariants give a partial classification, but there exist
-non-isomorphic objects with the same invariants. -/
-
-/-- Two objects with the same cardinality but different structure. -/
-
-instance : Object Nat where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "Nat"
-  repr n := toString n
+non-isomorphic objects with the same invariants.
+Object instance for Nat comes from Core.Basic. -/
 
 /-- The invariant "number of elements" does not distinguish
     between the group Z/4Z and the group Z/2Z × Z/2Z. -/
@@ -109,14 +95,10 @@ axiom groups_with_same_order_not_isomorphic :
   ∃ (G H : Type u) [Object G] [Object H],
     (∀ (x : G), True) ∧ (∀ (x : H), True) ∧ ¬ Nonempty (Iso G H)
 
-/-! ## Counterexample 6: Terminal object need not be "small"
+/-! ## Counterexample 6: Terminal object need not be "small" — L6
 
-In a large category, the terminal object can be "big" (have many elements). -/
-
-instance : Object (List Nat) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "MultiSet"
-  repr xs := toString xs
+In a large category, the terminal object can be "big" (have many elements).
+Object instance for List Nat comes from Core.Basic. -/
 
 /-- There is an object with infinitely many elements that is terminal
     in a suitably defined category. -/

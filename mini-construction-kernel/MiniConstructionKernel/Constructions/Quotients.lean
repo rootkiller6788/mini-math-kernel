@@ -148,18 +148,6 @@ structure SubobjectQuotient (α : Type u) [Object α] (S : Subobject α) (R : α
 
 section Examples
 
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
-
 def mod3Quotient : QuotientByEquiv Nat where
   R a b := a % 3 = b % 3
   isEquiv := {

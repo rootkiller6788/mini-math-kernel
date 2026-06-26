@@ -203,18 +203,6 @@ def classifyConstruction (table : ClassificationTable) (name : String) : Univers
 
 section Examples
 
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
 def productClass : ProductClassification Nat Bool :=
   { name := "Nat×Bool" }
 

@@ -15,25 +15,6 @@ import MiniConstructionKernel.Morphisms.Iso
 
 namespace MiniConstructionKernel
 
-open MiniObjectKernel
-
-/-! ## Object instances -/
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
-
 /-! ## Counterexample 1: Non-surjective "Quotient" map -/
 
 /-- A map that is not surjective cannot be a quotient map. -/
@@ -52,11 +33,6 @@ theorem nonSurjectiveMap_not_surjective : ¬ (∀ (b : Nat), ∃ a, nonSurjectiv
 structure FakeProduct (α β : Type u) where
   left : α
   right : β
-
-instance {α β : Type u} [Object α] [Object β] : Object (FakeProduct α β) where
-  theory := TheoryName.ofString "Set"
-  objName := s!"FakeProd({describe α},{describe β})"
-  repr p := s!"({repr p.left},{repr p.right})"
 
 /-- The FakeProduct does NOT satisfy the universal property because
     you cannot always pair two morphisms into it uniquely.

@@ -142,23 +142,6 @@ structure QuotientIso (α : Type u) [Object α] where
 
 section Examples
 
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
-
 def trivialNatIso : ConstructionIso Nat Nat :=
   identityIso Nat
 

@@ -70,12 +70,7 @@ theorem embeddingPreservesInjectivity {α : Type u} [Object α] {e : Embedding S
     (hInj : ∀ (x y : α), e.mapObj x = e.mapObj y → x = y) : PreservedUnder e (λ _ => True) := by
   intro x _; exact trivial
 
-/-! ## Concrete preservation: size -/
-
-instance : Object (List Char) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "CharList"
-  repr cs := String.mk cs
+/-! ## Concrete Preservation: Size — L6: Examples -/
 
 /-- Size (as a simple Nat) is a common invariant. -/
 def sizeOf (α : Type u) [Object α] (x : α) : Nat :=
@@ -85,8 +80,7 @@ def sizeOf (α : Type u) [Object α] (x : α) : Nat :=
 theorem idEmbeddingPreserves (T : TheoryName) (α : Type u) [Object α]
     (P : α → Prop) : PreservedUnder (Embedding.id T) P := by
   intro x hx
-  unfold Embedding.id
-  exact hx
+  simpa [Embedding.id] using hx
 
 /-- Composition of embeddings preserves what each component preserves. -/
 theorem compEmbeddingPreserves {S T U : TheoryName}
@@ -94,19 +88,37 @@ theorem compEmbeddingPreserves {S T U : TheoryName}
     (P : α → Prop) (h₁ : PreservedUnder e₁ P) (h₂ : PreservedUnder e₂ P) :
     PreservedUnder (Embedding.comp e₁ e₂) P := by
   intro x hx
-  unfold Embedding.comp
-  apply h₁
-  apply h₂
-  exact hx
+  simpa [Embedding.comp] using h₁ (e₂.mapObj α) (h₂ α hx)
 
-/-! ## Simple Object instance for #eval examples -/
+/-! ## Reflection Principles — L5: Proof Technique
 
-instance : Object Nat where
-  theory := TheoryName.ofString "Arithmetic"
-  objName := "Nat"
-  repr n := toString n
+Some embeddings not only preserve but also reflect properties.
+This is characteristic of conservative embeddings. -/
 
-/-! ## #eval examples -/
+/-- A property reflected by the identity embedding holds in the source
+    iff it holds in the target. -/
+theorem idEmbeddingReflects (T : TheoryName) (α : Type u) [Object α]
+    (P : α → Prop) : ReflectedBy (Embedding.id T) P := by
+  intro x hx
+  simpa [Embedding.id] using hx
+
+/-- Strict preservation by identity. -/
+theorem idEmbeddingStrictlyPreserves (T : TheoryName) (α : Type u) [Object α]
+    (P : α → Prop) : StrictlyPreserved (Embedding.id T) P := by
+  constructor
+  · exact idEmbeddingPreserves T α P
+  · exact idEmbeddingReflects T α P
+
+/-! ## Preservation of Invariants — L4: Core Theorem
+
+Key categorical properties preserved by certain kinds of morphisms. -/
+
+/-- Isomorphisms preserve and reflect all properties.
+    This is the fundamental invariance theorem. -/
+axiom isoPreservesAndReflects {α β : Type u} [Object α] [Object β]
+    (i : Iso α β) (P : α → Prop) (x : α) : P x ↔ P (i.toFun x)
+
+/-! ## #eval examples — L6: Verified Examples -/
 
 #eval describe (α := Nat)
 #eval sizeOf (α := Nat) 42

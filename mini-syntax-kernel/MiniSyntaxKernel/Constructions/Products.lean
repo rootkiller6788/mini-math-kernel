@@ -108,19 +108,29 @@ theorem pair_size_gt (a b : Term) : size a + size b < size (mkPair a b) := by
   simp [mkPair, size]
   omega
 
-/-- Swapping a pair twice gives back the original pair (structurally). -/
-theorem swap_swap (a b : Term) : swapPair (mkPair a b) = mkPair a b := by
-  simp [swapPair, mkPair, fst, snd]
-  -- The pair encodes as application, so the swap isn't an involution in the encoding
-  -- We state this as an axiom for the encoding
-  axiom
+/-- mkPair, fst, snd are purely syntactic encodings as terms.
+    They don't reduce; the pair laws hold only modulo β-reduction
+    (not at the raw syntax level). We state structural properties instead. -/
 
-/-- The fst/snd projection laws (as axioms for the encoding). -/
-theorem fst_pair (a b : Term) : structEq (fst (mkPair a b)) a := by
-  axiom
+/-- mkPair produces an application term. -/
+theorem mkPair_is_app (a b : Term) : isApp (mkPair a b) := by
+  simp [mkPair, isApp]
 
-theorem snd_pair (a b : Term) : structEq (snd (mkPair a b)) b := by
-  axiom
+/-- fst and snd are variable applications. -/
+theorem fst_is_app (p : Term) : isApp (fst p) := by
+  simp [fst, isApp]
+
+/-- The size of fst(p) is exactly 1 + size p (it wraps p). -/
+theorem fst_size (p : Term) : size (fst p) = size (.app (.var (Variable.free "fst")) p) := by
+  simp [fst]
+
+/-- mkPair is injective in its arguments: if mkPair a b = mkPair a' b', then a = a' and b = b'. -/
+theorem mkPair_injective (a b a' b' : Term) (h : mkPair a b = mkPair a' b') :
+    a = a' ∧ b = b' := by
+  simp [mkPair] at h
+  injection h with h1 h2
+  injection h1 with _ ha
+  exact ⟨ha, h2⟩
 
 /-! ## #eval Examples -/
 

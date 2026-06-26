@@ -10,59 +10,13 @@ import MiniLogicKernel.Core.Objects
 
 namespace MiniLogicKernel
 
-/-! ## Helper: List Operations -/
+/-! ## Counterexample Representation -/
 
-/-- Check if all elements of a list satisfy a predicate. -/
-def listAll {α : Type} (l : List α) (p : α → Bool) : Bool :=
-  match l with
-  | [] => true
-  | x :: xs => p x && listAll xs p
-
-/-- Check if any element of a list satisfies a predicate. -/
-def listAny {α : Type} (l : List α) (p : α → Bool) : Bool :=
-  match l with
-  | [] => false
-  | x :: xs => p x || listAny xs p
-
-/-- Find the first element satisfying a predicate, returning its index and the element. -/
-def listFind? {α : Type} (l : List α) (p : α → Bool) : Option α :=
-  match l with
-  | [] => none
-  | x :: xs => if p x then some x else listFind? xs p
-
-/-- Enumerate all 2^n assignments for a list of n distinct atom variables. -/
-def allAssignments : List Nat → List (Nat → Bool)
-  | []      => [fun _ => false]
-  | v :: vs =>
-    let rest := allAssignments vs
-    let setTrue := rest.map fun σ n => if n = v then true else σ n
-    let setFalse := rest.map fun σ n => if n = v then false else σ n
-    setTrue ++ setFalse
-
-/-- Check if a formula is a tautology by brute force. -/
-def checkTautologyBool (f : Formula) : Bool :=
-  let vars := f.atoms
-  listAll (allAssignments vars) fun σ => f.eval σ == true
-
-/-- Check if a formula is satisfiable by brute force. -/
-def checkSatisfiableBool (f : Formula) : Bool :=
-  let vars := f.atoms
-  listAny (allAssignments vars) fun σ => f.eval σ == true
-
-/-- A printable representation of a partial assignment: list of (atom, value) pairs.
-    This is used to display counterexamples. -/
+/-- A printable representation of a partial assignment. -/
 def AssignmentRepr := List (Nat × Bool)
 
 instance : Repr AssignmentRepr where
   reprPrec l _ := repr l
-
-/-- Find a counterexample assignment as a printable list of (atom, value) pairs.
-    Returns `none` if the formula is a tautology. -/
-def findCounterexample (f : Formula) : Option AssignmentRepr :=
-  let vars := f.atoms
-  match listFind? (allAssignments vars) (fun σ => f.eval σ == false) with
-  | none => none
-  | some σ => some (vars.map fun v => (v, σ v))
 
 /-! ## Formulas That Are Satisfiable But Not Valid -/
 

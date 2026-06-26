@@ -137,25 +137,34 @@ def freeMonoidUniversal_list (α : Type u) [Object α] : FreeMonoidUniversal α 
       objName := s!"FreeMonoid({describe α})"
       repr l := repr l
 
+/-! ## Adjunction between Categories -/
+
+structure Adjunction (F : Type u → Type v) (G : Type v → Type u) [∀ α, Object (F α)] [∀ β, Object (G β)] where
+  homEquiv : ∀ {α : Type u} {β : Type v} [Object α] [Object β], (F α → β) → (α → G β)
+  homEquiv_symm : ∀ {α : Type u} {β : Type v} [Object α] [Object β], (α → G β) → (F α → β)
+  natural_in_α : ∀ {α α' : Type u} {β : Type v} [Object α] [Object α'] [Object β]
+    (f : F α → β) (k : α' → α), homEquiv (f ∘ (fun _ => f)) (fun _ => ()) = (fun _ => ())
+  -- simplified naturality; full version requires functoriality
+  name : String
+
 /-! ## Adjoint Functor Theorem (Statement) -/
 
 -- Statement of the General Adjoint Functor Theorem
 structure AdjointFunctorTheoremStatement (F : Type u → Type v) [∀ α, Object (F α)] where
-  hypothesis : F preserves all limits
-  conclusion : ∃ (G : Type v → Type u), (∀ β, Object (G β)) ∧ (F ⊣ G)
+  hypothesis : (∀ (J : Type u) (D : J → Type u),
+      Nonempty (ConstructionIso (F (LimitType J D)) (LimitType J fun j => F (D j))))
+  conclusion : ∃ (G : Type v → Type u), (∀ β, Object (G β)) ∧ (Nonempty (Adjunction F G))
   name : String
   where
-    preserves_all_limits (F' : Type u → Type v) := ∀ (J : Type u) (D : J → Type v),
-      Nonempty (ConstructionIso (F' (LimitConstruction.limit J D))
-                                (LimitConstruction.limit J fun j => F' (D j)))
+    LimitType (J : Type u) (D : J → Type u) : Type u :=
+      { x : (∀ j : J, D j) // True }  -- formal placeholder for limit object
 
 /-! ## Special Adjoint Functor Theorem (Statement) -/
 
--- For well-powered categories with a cogenerator
+-- For well-powered categories with a cogenerator (simplified statement)
 structure SpecialAdjointFunctorTheorem (F : Type u → Type v) [∀ α, Object (F α)] where
-  hypothesis : (∀ α, the subobject lattice of F α is well-powered) ∧
-               (∃ cogenerator)
-  conclusion : ∃ (G : Type v → Type u), (∀ β, Object (G β)) ∧ (F ⊣ G)
+  hypothesis : True  -- placeholder: well-powered + cogenerator
+  conclusion : ∃ (G : Type v → Type u), (∀ β, Object (G β)) ∧ (Nonempty (Adjunction F G))
   name : String
 
 /-! ## Existence of Equalizers -/
@@ -210,23 +219,6 @@ theorem pushouts_exist {α β γ : Type u} [Object α] [Object β] [Object γ] (
 /-! ## Examples and evaluations -/
 
 section Examples
-
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
 
 def prodUniversal : ProductUniversal Nat Bool (BinProduct Nat Bool) :=
   binProductUniversal Nat Bool

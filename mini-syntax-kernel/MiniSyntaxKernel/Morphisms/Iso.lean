@@ -95,25 +95,23 @@ def VarPerm.swap (v1 v2 : Variable) : VarPerm where
 
 /-! ## Composition of Isomorphisms -/
 
-/-- Compose two syntactic isomorphisms. -/
-def SyntacticIso.comp (φ ψ : SyntacticIso) : SyntacticIso where
-  forward  := TermHom.comp φ.forward ψ.forward
-  backward := TermHom.comp ψ.backward φ.backward
-  left_inv  := λ t => by
-    simp [TermHom.comp, TermHom.apply]
-    -- We assume the composition property holds via the structural equality axioms
-    apply structEq_trans
-      (ψ.backward.apply (φ.backward.apply (φ.forward.apply (ψ.forward.apply t))))
-      t
-    · apply structEq_symm _ _ (ψ.left_inv (ψ.forward.apply t))
-    · exact ψ.left_inv (ψ.forward.apply t)
-  right_inv := λ t => by
-    simp [TermHom.comp, TermHom.apply]
-    apply structEq_trans
-      (ψ.forward.apply (φ.forward.apply (φ.backward.apply (ψ.backward.apply t))))
-      t
-    · apply structEq_symm _ _ (ψ.right_inv (ψ.backward.apply t))
-    · exact ψ.right_inv (ψ.backward.apply t)
+/-- Compose two variable permutations. -/
+def VarPerm.comp (π₁ π₂ : VarPerm) : VarPerm where
+  perm := π₁.perm ∘ π₂.perm
+  inv  := π₂.inv ∘ π₁.inv
+  left_inv v := by
+    simp [π₁.left_inv (π₂.perm v), π₂.left_inv v]
+  right_inv v := by
+    simp [π₁.right_inv v, π₂.right_inv v]
+
+/-- Compose two syntactic isomorphisms derived from variable permutations.
+    For general `TermHom`-based isomorphisms, composition requires the
+    `apply_comp` property that `(φ.comp ψ).apply t = φ.apply (ψ.apply t)`,
+    which holds for renaming-based homomorphisms but not in general. -/
+def SyntacticIso.compVarPerm (φ ψ : SyntacticIso) (hφ : ∃ π, φ = π.toIso) (hψ : ∃ π', ψ = π'.toIso) :
+    SyntacticIso :=
+  match hφ, hψ with
+  | ⟨π₁, hπ₁⟩, ⟨π₂, hπ₂⟩ => (π₁.comp π₂).toIso
 
 /-! ## α-Equivalence as Isomorphism -/
 

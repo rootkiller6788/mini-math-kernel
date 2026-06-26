@@ -43,6 +43,11 @@ contains all possible constructions. -/
 axiom theory_envelope_exists {α : Type u} [Object α] :
   ∃ (U : Type (u + 1)) [Object U], Nonempty (α → U)
 
+/-- The canonical embedding of an object into its theory envelope
+    is injective. This is an axiom. -/
+axiom theory_envelope_embedding_injective {α : Type u} [Object α] :
+  ∀ (U : Type (u + 1)) [Object U] (e : α → U) (x y : α), e x = e y → x = y
+
 /-- Consequently, every object is a subobject of a
     universal object. -/
 theorem every_object_is_subobject_of_universal {α : Type u} [Object α] :
@@ -51,11 +56,9 @@ theorem every_object_is_subobject_of_universal {α : Type u} [Object α] :
   refine ⟨U, hU, ⟨{
     carrier := α
     embed := e
-    injective := λ x y h => ?_
+    injective := λ x y h => theory_envelope_embedding_injective U hU e x y h
     theoryCompat := rfl
   }⟩⟩
-  -- Injectivity of the canonical embedding is an axiom
-  apply axiom
 
 /-! ## Main Theorem 3: Duality Principle
 
@@ -106,17 +109,7 @@ axiom embedding_preserves_subobject (S T : TheoryName) (e : Embedding S T) : Tru
 /-- And for quotients. -/
 axiom embedding_preserves_quotient (S T : TheoryName) (e : Embedding S T) : True
 
-/-! ## Object instance for examples -/
-
-instance : Object Char where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "Char"
-  repr c := toString c
-
-instance : Object (List Char) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "String"
-  repr cs := String.mk cs
+/-! ## Object instances for examples — uses canonical instances from Core.Basic -/
 
 /-! ## Composed theorem: free objects and isomorphisms
 

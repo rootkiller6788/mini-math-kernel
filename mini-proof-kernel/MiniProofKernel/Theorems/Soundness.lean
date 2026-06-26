@@ -23,11 +23,28 @@ def Context.entails (Γ : Context) (A : Formula) : Prop :=
     (∀ B ∈ Γ, B.eval assignment = true) →
     A.eval assignment = true
 
-/-- Boolean version for computational checking. -/
+/-- Boolean version for computational checking on formulas with
+a small number of atoms (≤ 4). Enumerates all truth assignments
+and checks semantic entailment. -/
 def Context.entailsBool (Γ : Context) (A : Formula) : Bool :=
-  -- Approximate: check small assignments
-  -- For a full check, would need SAT solver
-  id true
+  -- Collect all atoms from Γ and A, then enumerate assignments
+  let allAtoms := dedupAtoms (Γ.bind Formula.atoms ++ A.atoms)
+  let atomCount := allAtoms.length
+  if atomCount > 6 then false  -- Too many atoms for brute force
+  else
+    let maxMask := 2 ^ atomCount
+    (List.range maxMask).all (λ mask =>
+      let assign (k : Nat) : Bool :=
+        match allAtoms.findIdx? (· == k) with
+        | some idx => ((mask >>> idx) &&& 1) == 1
+        | none => false
+      let ctxSatisfied := Γ.all (λ f => f.eval assign == true)
+      if ctxSatisfied then A.eval assign == true else true
+    )
+where
+  dedupAtoms : List Nat → List Nat
+    | [] => []
+    | n :: ns => n :: dedupAtoms (ns.filter (· != n))
 
 /-! ## Soundness Theorem -/
 

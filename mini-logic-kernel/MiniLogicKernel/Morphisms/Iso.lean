@@ -1,42 +1,16 @@
 /-
 # Logic Kernel: Isomorphisms
 
-Logical isomorphisms: formula equivalence
-and structure isomorphisms.
+Logical isomorphisms: formula isomorphism (bijective atom renaming)
+and structure isomorphisms (domain bijections preserving predicates).
+
+Knowledge coverage: L2 (Isomorphism), L3 (Math Structures), L5 (Proof by bijection)
 -/
 
 import MiniLogicKernel.Core.Basic
 import MiniLogicKernel.Core.Objects
 
 namespace MiniLogicKernel
-
-/-! ## Atom Translation
-
-Translate all atom indices in a formula by a given mapping.
--/
-
-def Formula.translate (f : Formula) (σ : Nat → Nat) : Formula :=
-  match f with
-  | .atom n => .atom (σ n)
-  | .true => .true
-  | .false => .false
-  | .not A => .not (translate A σ)
-  | .and A B => .and (translate A σ) (translate B σ)
-  | .or A B => .or (translate A σ) (translate B σ)
-  | .impl A B => .impl (translate A σ) (translate B σ)
-  | .equiv A B => .equiv (translate A σ) (translate B σ)
-
-theorem Formula.translate_eval (f : Formula) (σ : Nat → Nat) (a : Nat → Bool) :
-    (f.translate σ).eval a = f.eval (a ∘ σ) := by
-  induction f with
-  | atom n => rfl
-  | true => rfl
-  | false => rfl
-  | not A ih => simp [Formula.translate, Formula.eval, ih]
-  | and A B ihA ihB => simp [Formula.translate, Formula.eval, ihA, ihB]
-  | or A B ihA ihB => simp [Formula.translate, Formula.eval, ihA, ihB]
-  | impl A B ihA ihB => simp [Formula.translate, Formula.eval, ihA, ihB]
-  | equiv A B ihA ihB => simp [Formula.translate, Formula.eval, ihA, ihB]
 
 /-! ## Formula Isomorphism
 
@@ -78,11 +52,11 @@ theorem FormulaIso.preserves_tautology (φ : FormulaIso) (f : Formula) :
     isTautology f ↔ isTautology (f.translate φ.atomMap) := by
   constructor
   · intro htaut assignment
-    rw [Formula.translate_eval f φ.atomMap assignment]
+    rw [Formula.eval_translate f φ.atomMap assignment]
     apply htaut
   · intro htaut assignment
     have := htaut (assignment ∘ φ.inverse)
-    rw [Formula.translate_eval f φ.atomMap (assignment ∘ φ.inverse)] at this
+    rw [Formula.eval_translate f φ.atomMap (assignment ∘ φ.inverse)] at this
     have h_eq : (assignment ∘ φ.inverse) ∘ φ.atomMap = assignment := by
       funext x
       simp [Function.comp, φ.leftInv x]
@@ -94,13 +68,13 @@ theorem FormulaIso.preserves_satisfiability (φ : FormulaIso) (f : Formula) :
   constructor
   · intro ⟨a, hsat⟩
     refine ⟨a ∘ φ.inverse, ?_⟩
-    rw [Formula.translate_eval f φ.atomMap (a ∘ φ.inverse)]
+    rw [Formula.eval_translate f φ.atomMap (a ∘ φ.inverse)]
     have h_eq : (a ∘ φ.inverse) ∘ φ.atomMap = a := by
       funext x; simp [Function.comp, φ.leftInv x]
     rw [h_eq, hsat]
   · intro ⟨a, hsat⟩
     refine ⟨a ∘ φ.atomMap, ?_⟩
-    rw [← Formula.translate_eval f φ.atomMap a, hsat]
+    rw [← Formula.eval_translate f φ.atomMap a, hsat]
 
 /-! ## Structure Isomorphism
 

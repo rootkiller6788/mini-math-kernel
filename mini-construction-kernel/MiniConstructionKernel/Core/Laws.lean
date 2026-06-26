@@ -8,6 +8,8 @@ distributivity laws, functoriality laws.
 
 import MiniConstructionKernel.Core.Basic
 import MiniConstructionKernel.Core.Objects
+import MiniConstructionKernel.Constructions.Products
+import MiniConstructionKernel.Constructions.Universal
 
 namespace MiniConstructionKernel
 
@@ -115,24 +117,15 @@ instance : FunctorialConstruction List where
 
 /-! ## Adjointness Laws -/
 
--- Free ⊣ Forgetful: FreeConstruction F and a forgetful functor U form an adjunction
-structure FreeForgetfulAdjunction (F U : Type u → Type u) [∀ α, Object (F α)] [∀ α, Object (U α)] where
+-- Adjointness between constructions F and U
+structure ConstructionsAdjunction (F U : Type u → Type u) [∀ α, Object (F α)] [∀ α, Object (U α)] where
   unit : {α : Type u} → [Object α] → α → U (F α)
-  counit : {β : Type u} → [Object β] → F (U β) → β
-  triangle_left : ∀ {α : Type u} [Object α], (∀ (x : F α), counit (F α) (F.mapBy unit x) = x) → True
-  triangle_right : ∀ {β : Type u} [Object β], (∀ (x : U β), unit (U β) (counit β x) = x) → True
+  counit : {α : Type u} → [Object α] → F (U α) → α
   name : String
 
 /-! ## Examples and evaluations -/
 
 section Examples
-
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
 
 def trivialUniqueness : UniversalUniqueness Nat Nat :=
   universalUniquenessFromIso (fun n => n) (fun n => n) (fun _ => rfl) (fun _ => rfl)

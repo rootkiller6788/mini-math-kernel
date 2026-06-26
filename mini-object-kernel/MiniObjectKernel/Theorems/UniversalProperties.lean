@@ -35,11 +35,7 @@ theorem terminal_self_map_unique {α : Type u} [Object α] (h : Terminal α) :
   apply h_uniq g
   · trivial
 
-/-- Unit type is terminal in Set (as an Object). -/
-instance : Object Unit where
-  theory := TheoryName.root
-  objName := "Terminal"
-  repr _ := "()"
+/-- Unit type is terminal in Set (uses canonical Object instance from Core.Basic). -/
 
 theorem unit_is_terminal : Terminal Unit := by
   intro β _
@@ -61,10 +57,7 @@ def Initial (α : Type u) [Object α] : Prop :=
 axiom initial_unique {α β : Type u} [Object α] [Object β]
     (hα : Initial α) (hβ : Initial β) : Iso α β
 
-instance : Object Empty where
-  theory := TheoryName.root
-  objName := "Initial"
-  repr e := nomatch e
+/-- Empty type is initial (uses canonical Object instance from Core.Basic). -/
 
 theorem empty_is_initial : Initial Empty := by
   intro β _
@@ -94,17 +87,8 @@ instance : Object (α × β) where
   objName := s!"Product"
   repr p := s!"({repr p.1}, {repr p.2})"
 
--- Auxiliary Object instances for local use
-instance : Object Nat where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object String where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "String"
-  repr s := s
-
+/-- The product type is a product in the categorical sense
+    (uses canonical Object instances from Core.Basic). -/
 theorem pair_product_is_product (α β : Type u) [Object α] [Object β] :
     IsProduct α β (α × β) Prod.fst Prod.snd := by
   intro X _ f g

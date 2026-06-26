@@ -103,18 +103,19 @@ def decompose (t : Term) : Term × List Term :=
 def rebuild (head : Term) (args : List Term) : Term :=
   args.foldl (λ acc a => .app acc a) head
 
-/-- Terms with application form a free magma on variables. -/
-theorem freeMagma_property (t : Term) :
-    size (rebuild (decompose t).1 (decompose t).2) = size t := by
+/-- The decompose/rebuild roundtrip preserves the size of the term.
+    For non-app terms, decompose returns (t, []) and rebuild gives back t.
+    For app terms, the size is preserved by structural induction. -/
+theorem decompose_rebuild_size (t : Term) : size (rebuild (decompose t).1 (decompose t).2) = size t := by
   induction t with
   | var _ => simp [decompose, rebuild, size]
   | app f a ihf iha =>
-    simp [decompose, rebuild, size]
-    -- This is an axiom: the decompose/rebuild roundtrip preserves size
-    axiom
+    simp [decompose, rebuild, size, ihf, iha]
+  | lam _ _ ih => simp [decompose, rebuild, size, ih]
+  | pi _ _ _ ihd ihc => simp [decompose, rebuild, size, ihd, ihc]
   | sort _ => simp [decompose, rebuild, size]
   | lit _ => simp [decompose, rebuild, size]
-  | _ => simp [decompose, rebuild, size]
+  | letE _ _ _ ihv ihb => simp [decompose, rebuild, size, ihv, ihb]
 
 /-! ## #eval Examples -/
 

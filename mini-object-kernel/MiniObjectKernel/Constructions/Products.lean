@@ -89,22 +89,17 @@ def Coproduct.copair {α β : Type u} [Object α] [Object β] (C : Coproduct α 
     (X : Type u) [Object X] (f : α → X) (g : β → X) : C.carrier → X :=
   (C.universal X f g).exists.choose
 
-/-! ## Object instances for examples -/
+/-! ## Terminal and Initial Objects — L2: Core Concepts
 
-instance : Object (List String) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "StringList"
-  repr xs := toString xs
-
-instance : Object Unit where
-  theory := TheoryName.root
-  objName := "Terminal"
-  repr _ := "()"
+Terminal objects have a unique morphism from every object.
+Initial objects have a unique morphism to every object.
+These are the 0-ary cases of product and coproduct. -/
 
 /-- Terminal object: any type with exactly one element (up to isomorphism). -/
 def isTerminal (α : Type u) [Object α] : Prop :=
   ∀ (β : Type u) [Object β], ∃! f : β → α, True
 
+/-- Unit is terminal (its Object instance is in Core.Basic). -/
 theorem unit_isTerminal : isTerminal Unit := by
   intro β _
   refine ⟨λ _ => (), trivial, ?_⟩
@@ -116,21 +111,76 @@ theorem unit_isTerminal : isTerminal Unit := by
 def isInitial (α : Type u) [Object α] : Prop :=
   ∀ (β : Type u) [Object β], ∃! f : α → β, True
 
-instance : Object Empty where
-  theory := TheoryName.root
-  objName := "Initial"
-  repr e := nomatch e
-
+/-- Empty is initial (its Object instance is in Core.Basic). -/
 theorem empty_isInitial : isInitial Empty := by
   intro β _
   refine ⟨λ e => nomatch e, trivial, ?_⟩
   intro f _
   funext e; nomatch e
 
-/-! ## #eval examples -/
+/-! ## Fiber Product (Pullback) — L3: Advanced Construction
+
+The fiber product of two morphisms f : A → C, g : B → C
+is the limit of the cospan A → C ← B. -/
+
+/-- A pullback of f : α → γ and g : β → γ is an object P
+    with maps to α and β making the square commute, universal. -/
+structure Pullback {α β γ : Type u} [Object α] [Object β] [Object γ]
+    (f : α → γ) (g : β → γ) where
+  carrier : Type u
+  [carrierObj : Object carrier]
+  p₁ : carrier → α
+  p₂ : carrier → β
+  commutativity : ∀ x, f (p₁ x) = g (p₂ x)
+  universal : ∀ (X : Type u) [Object X] (h₁ : X → α) (h₂ : X → β),
+    (∀ x, f (h₁ x) = g (h₂ x)) → ∃! k : X → carrier, (∀ x, p₁ (k x) = h₁ x) ∧ (∀ x, p₂ (k x) = h₂ x)
+
+/-- The canonical pullback using the subtype of the product. -/
+def Pullback.canonical {α β γ : Type u} [Object α] [Object β] [Object γ]
+    (f : α → γ) (g : β → γ) : Pullback f g where
+  carrier := { p : α × β // f p.1 = g p.2 }
+  p₁ := λ ⟨(a, _), _⟩ => a
+  p₂ := λ ⟨(_, b), _⟩ => b
+  commutativity := λ ⟨(a, b), h⟩ => h
+  universal := λ X _ h₁ h₂ h_comm => by
+    refine ⟨λ x => ⟨(h₁ x, h₂ x), h_comm x⟩, ⟨λ _ => rfl, λ _ => rfl⟩, ?_⟩
+    intro k ⟨hk₁, hk₂⟩
+    funext x
+    apply Subtype.ext
+    apply Prod.ext
+    · exact hk₁ x
+    · exact hk₂ x
+
+/-! ## Exponential Objects — L8: Advanced Topic
+
+In a cartesian closed category, for any two objects A, B
+there is an exponential object B^A representing the hom-set. -/
+
+/-- An exponential object B^A with evaluation map ev : B^A × A → B. -/
+structure Exponential {α β : Type u} [Object α] [Object β] where
+  carrier : Type u
+  [carrierObj : Object carrier]
+  ev : carrier × α → β
+  universal : ∀ (X : Type u) [Object X] (f : X × α → β),
+    ∃! f̂ : X → carrier, ∀ x a, ev (f̂ x, a) = f (x, a)
+
+/-- The canonical exponential in Set: the function type. -/
+def Exponential.canonical (α β : Type u) [Object α] [Object β] : Exponential (α := α) (β := β) where
+  carrier := α → β
+  ev := λ (f, a) => f a
+  universal := λ X _ f => by
+    refine ⟨λ x a => f (x, a), λ _ _ => rfl, ?_⟩
+    intro g hg
+    funext x a
+    exact hg x a
+
+/-! ## #eval examples — L6: Verified Examples -/
 
 #eval TheoryName.ofString "Algebra.Group"
-#eval describe (α := List String)
-#eval "Product and Coproduct constructions defined"
+#eval describe (α := Nat)
+#eval describe (α := String)
+#eval "Product, Coproduct, Pullback, and Exponential constructions defined"
+
+end MiniObjectKernel
 
 end MiniObjectKernel

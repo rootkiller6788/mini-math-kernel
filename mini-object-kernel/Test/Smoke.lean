@@ -18,11 +18,7 @@ open MiniObjectKernel
 #eval TheoryName.extend (TheoryName.ofString "Algebra") "Group"
 
 #eval "── Core.Basic: Object typeclass ──"
-instance : Object Nat where
-  theory := TheoryName.ofString "Arithmetic"
-  objName := "Nat"
-  repr n := toString n
-
+-- Uses canonical instance from Core.Basic
 #eval describe Nat
 #eval objName Nat
 

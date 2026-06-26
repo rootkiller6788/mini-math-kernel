@@ -115,16 +115,6 @@ def vectorBundleConstruction (base : GeometricSpace) (rank : Nat) : Construction
 
 /-! ## Evaluations -/
 
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
 def p2 := projectiveSpaceConstruction 2
 def gr12 := grassmannianConstruction 1 2
 def tangentEx := tangentSpaceConstruction

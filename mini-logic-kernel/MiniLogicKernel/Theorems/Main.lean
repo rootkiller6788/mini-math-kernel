@@ -11,26 +11,10 @@ import MiniLogicKernel.Theorems.Classification
 
 namespace MiniLogicKernel
 
-/-! ## Satisfiability of Sets of Formulas
-
-Extend the single-formula satisfiability to sets of formulas.
--/
-
-/-- A set of formulas is satisfiable if there exists an assignment
-making every formula in the set true. -/
-def isSatisfiableSet (Γ : Set Formula) : Prop :=
-  ∃ (σ : Nat → Bool), ∀ f ∈ Γ, f.eval σ = true
-
-/-- A set of formulas is unsatisfiable if every assignment fails
-to satisfy at least one formula. -/
-def isUnsatisfiableSet (Γ : Set Formula) : Prop :=
-  ∀ (σ : Nat → Bool), ¬ (∀ f ∈ Γ, f.eval σ = true)
-
-/-- A set of formulas is finitely satisfiable if every finite subset is satisfiable. -/
-def isFinitelySatisfiable (Γ : Set Formula) : Prop :=
-  ∀ (Δ : Set Formula), Δ ⊆ Γ → Set.Finite Δ → isSatisfiableSet Δ
-
 /-! ## Compactness Theorem
+
+(NOTE: `isSatisfiableSet`, `isUnsatisfiableSet`, `isFinitelySatisfiable`
+are defined in Core/Basic.)
 
 The compactness theorem for propositional logic: if every finite subset
 of a set Γ of formulas is satisfiable, then Γ itself is satisfiable.

@@ -186,42 +186,11 @@ For propositional logic, truth tables provide a complete decision
 procedure for tautology checking. Since formulas have finitely many atoms,
 we can enumerate all 2^n assignments and verify the formula evaluates
 to true under each.
+
+(NOTE: `allAssignmentsNat`, `Formula.maxAtom`, and `decideTautology`
+are defined in Core/Basic. This file provides alternative implementations
+and Curry-Howard correspondence constructions.)
 -/
-
-/--
-Generate all Boolean assignments for atoms in {0, 1, ..., n-1}.
-Atoms >= n are assigned false.
-
-Returns a list of 2^n assignments.
--/
-def allAssignments (n : Nat) : List (Nat → Bool) :=
-  match n with
-  | 0 => [fun _ => false]
-  | m+1 =>
-    let prev := allAssignments m
-    (prev.map fun σ k => if k == m then false else σ k) ++
-    (prev.map fun σ k => if k == m then true else σ k)
-
-/-- Find the maximum atom index used in a formula. -/
-def Formula.maxAtom : Formula → Nat
-  | .atom n => n
-  | .true => 0
-  | .false => 0
-  | .not A => maxAtom A
-  | .and A B => max (maxAtom A) (maxAtom B)
-  | .or A B => max (maxAtom A) (maxAtom B)
-  | .impl A B => max (maxAtom A) (maxAtom B)
-  | .equiv A B => max (maxAtom A) (maxAtom B)
-
-/--
-Decidable tautology checker: enumerate all assignments for atoms up to
-the maximum atom in the formula, and verify the formula is true
-under each. Returns true iff the formula is a tautology for all
-assignments over its atoms.
--/
-def decideTautology (f : Formula) : Bool :=
-  let n := f.maxAtom + 1
-  (allAssignments n).all fun σ => f.eval σ
 
 /--
 Verify: A → A is a tautology.

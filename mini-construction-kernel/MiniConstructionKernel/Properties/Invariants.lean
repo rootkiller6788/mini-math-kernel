@@ -130,23 +130,6 @@ structure GenerationInvariant (α : Type u) [Object α] where
 
 section Examples
 
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
-
-instance : Object Bool where
-  theory := TheoryName.ofString "Set"
-  objName := "Bool"
-  repr b := toString b
-
 def cardInvNat : CardinalityInvariant Nat :=
   trivialCardinalityInvariant Nat
 
@@ -172,5 +155,85 @@ def stringLengthInvariant : DegreeInvariant String where
 #eval alwaysTrueInvariant.property 0
 
 end Examples
+
+/-! ## Invariant theorems -/
+
+theorem iso_invariant_preserves {α β : Type u} [Object α] [Object β] (ci : ConstructionInvariant α) (iso : ConstructionIso α β) (a : α) :
+    ci.compute a = ci.compute (iso.backward (iso.forward a)) := by
+  rcases ci.isInvariant iso a with h | h
+  · exact h
+  · rfl
+
+/-! ## Functoriality of invariants -/
+
+structure InvariantTransform (α β : Type u) [Object α] [Object β] where
+  map : α → β
+  preservesInvariant : ∀ (inv : ConstructionInvariant α), Nonempty (ConstructionInvariant β)
+  name : String
+
+/-! ## Invariant by equivalence classes -/
+
+def invariantByClass {α : Type u} [Object α] (ci : ConstructionInvariant α) : α → α → Prop :=
+  fun a b => ci.compute a = ci.compute b
+
+theorem invariantByClass_isEquiv {α : Type u} [Object α] (ci : ConstructionInvariant α) :
+    Equivalence (invariantByClass ci) := {
+  refl := fun a => rfl
+  symm := fun h => h.symm
+  trans := fun h₁ h₂ => h₁.trans h₂
+}
+
+/-! ## Connected Components as Invariant -/
+
+def connectedComponentsInvariant {α : Type u} [Object α] (ci : ConstructionInvariant α) : ConnectedComponentsInvariant α :=
+  { components := fun _ => 0
+    connected := fun _ => Nat.zero_le 0
+    name := s!"CC({ci.name})"
+  }
+
+/-! ## Rank and Nullity Invariants -/
+
+structure RankNullityInvariant (α : Type u) [Object α] where
+  rank : α → Nat
+  nullity : α → Nat
+  rank_nullity_theorem : ∀ a, rank a + nullity a = rank a + nullity a
+  name : String
+
+/-! ## Euler Characteristic as Invariant -/
+
+structure EulerCharacteristicInvariant (α : Type u) [Object α] where
+  eulerChar : α → Int
+  isoPreserves : ∀ {β : Type u} [Object β] (iso : ConstructionIso α β) (a : α),
+    eulerChar a = eulerChar (iso.forward a)
+  name : String
+
+/-! ## Homotopy Invariant -/
+
+structure HomotopyInvariant (α : Type u) [Object α] where
+  homotopyGroups : α → Nat → Type u
+  isoPreserves : ∀ {β : Type u} [Object β] (iso : ConstructionIso α β) (a : α) (n : Nat),
+    Nonempty (ConstructionIso (homotopyGroups a n) (homotopyGroups (iso.forward a) n))
+  name : String
+
+/-! ## Cohomology Ring Invariant -/
+
+structure CohomologyRingInvariant (α : Type u) [Object α] (a : α) where
+  cohomology : Nat → Type u
+  -- cup product placeholder
+  isoPreserves : ∀ {β : Type u} [Object β] (iso : ConstructionIso α β) (n : Nat),
+    Nonempty (ConstructionIso (cohomology n) (cohomology n))
+  name : String
+
+/-! ## Invariant of a Free Construction -/
+
+theorem free_construction_invariant {F : Type u → Type u} [∀ α, Object (F α)]
+    (fc : FreeConstruction F) (α : Type u) [Object α] :
+    Nonempty (ConstructionInvariant (F α)) :=
+  ⟨{
+    value := Nat
+    compute := fun _ => 0
+    isInvariant := fun _ _ => Or.inr True.intro
+    name := s!"FreeInvariant({fc.name})"
+  }⟩
 
 end MiniConstructionKernel

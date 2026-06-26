@@ -117,28 +117,6 @@ structure PushoutConstruction (α β γ : Type u) (f : γ → α) (g : γ → β
 
 section Examples
 
-open MiniObjectKernel
-
-instance : Object Nat where
-  theory := TheoryName.ofString "Set"
-  objName := "Nat"
-  repr n := toString n
-
-instance : Object String where
-  theory := TheoryName.ofString "Set"
-  objName := "String"
-  repr s := s
-
-instance : Object Unit where
-  theory := TheoryName.ofString "Set"
-  objName := "Unit"
-  repr _ := "()"
-
-instance : Object Empty where
-  theory := TheoryName.ofString "Set"
-  objName := "Empty"
-  repr e := nomatch e
-
 def freeOption : FreeConstruction Option where
   unit a := some a
   extend f

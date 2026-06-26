@@ -61,7 +61,10 @@ instance : ComputationalObject Char where
   decEq := inferInstance
   encode c := toString c
   decode s :=
-    if s.length == 1 then some s.get ⟨0, by omega⟩
+    if h : s.length = 1 then some (s.get ⟨0, by
+      have : 0 < s.length := by
+        rw [h]; exact Nat.zero_lt_one
+      exact this⟩)
     else none
 
 /-! ## Program as an Object

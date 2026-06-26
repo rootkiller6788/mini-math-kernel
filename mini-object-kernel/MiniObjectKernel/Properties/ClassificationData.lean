@@ -97,12 +97,7 @@ def classifyByCardinality (card : Cardinality) : ObjectClass :=
   | Cardinality.infinite => { name := "CountablyInfinite", description := "Countably infinite", typicalExample := "Natural numbers" }
   | Cardinality.uncountable => { name := "Uncountable", description := "Uncountably infinite", typicalExample := "Real numbers" }
 
-/-! ## Object instance for examples -/
-
-instance : Object (List String) where
-  theory := TheoryName.ofString "SetTheory"
-  objName := "StringList"
-  repr xs := toString xs
+/-! ## Object instance for examples — uses canonical instances from Core.Basic -/
 
 /-- Build a classification profile from a list. -/
 def listProfile (xs : List String) : InvariantProfile :=
