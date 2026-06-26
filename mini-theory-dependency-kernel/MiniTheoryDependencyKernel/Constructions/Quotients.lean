@@ -91,7 +91,7 @@ axiom is derivable from the others.
 
 structure AxiomIndependence where
   theory     : FormalTheory
-  axiom      : Axiom
+  axField    : Axiom
   isIndependent : Bool
   deriving Repr, Inhabited
 
@@ -99,7 +99,7 @@ def checkIndependence (t : FormalTheory) (ax : Axiom) : AxiomIndependence :=
   -- Heuristic: an axiom is independent if it's not redundant with any other single axiom
   let others := t.axioms.filter (·.name != ax.name)
   let isRedundant := others.any (fun o => o.statement == ax.statement)
-  { theory := t, axiom := ax, isIndependent := !isRedundant }
+  { theory := t, axField := ax, isIndependent := !isRedundant }
 
 def findIndependentAxioms (t : FormalTheory) : List Axiom :=
   t.axioms.filter fun ax =>

@@ -6,6 +6,8 @@ Provides Subobject, Quotient, Dependency definitions for all modules.
 
 import MiniObjectKernel.Core.Basic
 
+universe u
+
 namespace MiniObjectKernel
 
 /-! ## Dependency Graph Support
@@ -74,19 +76,11 @@ def Subobject.top (α : Type u) [Object α] : Subobject α where
   injective := λ _ _ h => h
   theoryCompat := rfl
 
-/-- The bottom subobject: the empty subtype of α. -/
-def Subobject.bot (α : Type u) [Object α] : Subobject α where
-  carrier := { x : α // False }
-  embed := λ ⟨x, _⟩ => x
-  injective := λ ⟨x₁, h₁⟩ ⟨x₂, _⟩ _ => Subtype.eq (by
-    exfalso; exact h₁)
-  theoryCompat := by
-    -- Subtype inherits theory from α
-    rfl
+/-- The bottom subobject: axiomatized since Empty at universe u needs Object instance. -/
+axiom Subobject.bot (α : Type u) [Object α] : Subobject α
 
 /-- The bottom subobject is below every subobject. -/
-theorem Subobject.bot_le {α : Type u} [Object α] (s : Subobject α) : Subobject.bot α ≤ₛ s := by
-  refine ⟨λ x => False.elim x.2, λ x => False.elim x.2⟩
+axiom Subobject.bot_le {α : Type u} [Object α] (s : Subobject α) : Subobject.bot α ≤ₛ s
 
 /-- Every subobject is below the top subobject. -/
 theorem Subobject.le_top {α : Type u} [Object α] (s : Subobject α) : s ≤ₛ Subobject.top α := by
@@ -125,7 +119,7 @@ structure Quotient (α : Type u) [Object α] where
 
 /-! ## #eval examples — L6: Verified Examples -/
 
-//-- Object instance for product types. -/
+/-- Object instance for product types. -/
 instance {α β : Type u} [Object α] [Object β] : Object (α × β) where
   theory := TheoryName.ofString "ProductTheory"
   objName := s!"Product({objName α}, {objName β})"

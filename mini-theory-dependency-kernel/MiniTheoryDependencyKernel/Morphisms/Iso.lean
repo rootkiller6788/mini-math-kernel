@@ -8,6 +8,7 @@ between them — they are essentially the same theory up to renaming.
 
 import MiniTheoryDependencyKernel.Core.Basic
 import MiniTheoryDependencyKernel.Core.Objects
+import MiniTheoryDependencyKernel.Core.Laws
 import MiniTheoryDependencyKernel.Morphisms.Hom
 
 namespace MiniTheoryDependencyKernel

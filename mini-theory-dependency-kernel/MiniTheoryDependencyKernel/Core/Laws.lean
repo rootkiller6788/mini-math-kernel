@@ -8,6 +8,7 @@ and dependency closure properties.
 
 import MiniTheoryDependencyKernel.Core.Basic
 import MiniTheoryDependencyKernel.Core.Objects
+import MiniTheoryDependencyKernel.Constructions.Universal
 
 namespace MiniTheoryDependencyKernel
 
@@ -18,13 +19,6 @@ open MiniObjectKernel
 A valid theory dependency graph must be acyclic: no theory should
 depend on itself (directly or transitively).
 -/
-
-def DependencyGraph.isAcyclic (g : DependencyGraph) : Bool :=
-  g.topologicalOrder.isSome
-
-/-- Check if the graph is a DAG (directed acyclic graph). -/
-def DependencyGraph.isDAG (g : DependencyGraph) : Bool :=
-  g.isAcyclic
 
 def DependencyGraph.hasDirectCycle (g : DependencyGraph) : Bool :=
   g.edges.any (fun e => e.source == e.target)
@@ -42,21 +36,22 @@ structure DependencyPath where
   edges   : List DependencyEdge
   deriving Repr, Inhabited
 
-def DependencyGraph.allPaths (g : DependencyGraph) (from to_ : TheoryName) : List DependencyPath :=
-  go [from] [] from
+def DependencyGraph.allPaths (g : DependencyGraph) (src to_ : TheoryName) : List DependencyPath :=
+  go (g.nodeCount + 1) [src] [] src
 where
-  go : List TheoryName → List DependencyEdge → TheoryName → List DependencyPath
-    | path, edges, current =>
+  go : Nat → List TheoryName → List DependencyEdge → TheoryName → List DependencyPath
+    | 0, _, _, _ => []
+    | fuel + 1, path, edges, current =>
       if current == to_ && path.length > 1 then
-        [{ source := from, target := to_, path, edges }]
+        [{ source := src, target := to_, path, edges }]
       else
         let nextEdges := g.edgesFrom current
         nextEdges.bind fun e =>
           if path.contains e.target then []  -- avoid cycles
-          else go (path ++ [e.target]) (edges ++ [e]) e.target
+          else go fuel (path ++ [e.target]) (edges ++ [e]) e.target
 
-def DependencyGraph.hasPath (g : DependencyGraph) (from to_ : TheoryName) : Bool :=
-  g.allPaths from to_ |>.length > 0
+def DependencyGraph.hasPath (g : DependencyGraph) (src to_ : TheoryName) : Bool :=
+  (g.allPaths src to_).length > 0
 
 /-! ## Transitive Closure Operation
 

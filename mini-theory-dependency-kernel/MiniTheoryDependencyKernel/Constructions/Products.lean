@@ -8,6 +8,7 @@ free theory extensions.
 
 import MiniTheoryDependencyKernel.Core.Basic
 import MiniTheoryDependencyKernel.Core.Objects
+import MiniTheoryDependencyKernel.Constructions.Subobjects
 
 namespace MiniTheoryDependencyKernel
 
@@ -55,7 +56,7 @@ structure TheoryCombination where
   deriving Repr, Inhabited
 
 instance : ToString TheoryCombination where
-  toString c := s!"Comb({c.theory1.theoryName} +_{shared} {c.theory2.theoryName})"
+  toString c := s!"Comb({c.theory1.theoryName} +_shared {c.theory2.theoryName})"
 
 def TheoryCombination.combined (c : TheoryCombination) : FormalTheory :=
   { theoryName := c.combinedName

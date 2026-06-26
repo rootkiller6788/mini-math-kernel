@@ -6,7 +6,6 @@ cycle detection, transitive closure, build order, impact analysis.
 -/
 
 import MiniTheoryDependencyKernel.Core.Basic
-import MiniTheoryDependencyKernel.Properties.Invariants
 
 namespace MiniTheoryDependencyKernel
 
@@ -17,56 +16,69 @@ def DependencyGraph.topologicalOrder (g : DependencyGraph) : Option (List Theory
     g.edges.filter (·.target == name) |>.length
   let initQueue : List TheoryName :=
     g.nodes.filter (fun n => inDegree n.name == 0) |>.map (·.name)
-  go initQueue [] (inDegree)
+  go (g.nodeCount + 1) initQueue [] (inDegree)
 where
-  go : List TheoryName → List TheoryName → (TheoryName → Nat) → Option (List TheoryName)
-    | [], order, _ =>
+  go : Nat → List TheoryName → List TheoryName → (TheoryName → Nat) → Option (List TheoryName)
+    | 0, _, _, _ => none
+    | fuel + 1, [], order, _ =>
       if order.length == g.nodes.length then some order.reverse
       else none
-    | name :: rest, order, inDeg =>
+    | fuel + 1, name :: rest, order, inDeg =>
       let dependents := g.edgesFrom name |>.map (·.target)
       let newInDeg (n : TheoryName) : Nat :=
         if dependents.contains n then inDeg n - 1 else inDeg n
       let newReady := dependents.filter fun n => newInDeg n == 0 && !(name :: order).contains n
-      go (rest ++ newReady) (name :: order) newInDeg
+      go fuel (rest ++ newReady) (name :: order) newInDeg
+
+def DependencyGraph.isAcyclic (g : DependencyGraph) : Bool :=
+  g.topologicalOrder.isSome
+
+def DependencyGraph.isDAG (g : DependencyGraph) : Bool :=
+  g.isAcyclic
 
 def DependencyGraph.findCycle (g : DependencyGraph) : Option (List TheoryName) :=
   match g.topologicalOrder with
   | some _ => none
   | none =>
-    g.nodes.findSome? fun start => dfs [start.name] start.name
+    g.nodes.findSome? fun start => dfs (g.nodeCount + 1) [start.name] start.name
 where
-  dfs : List TheoryName → TheoryName → Option (List TheoryName)
-    | path, current =>
+  dfs : Nat → List TheoryName → TheoryName → Option (List TheoryName)
+    | 0, _, _ => none
+    | fuel + 1, path, current =>
       let neighbors := g.edgesFrom current |>.map (·.target)
-      match neighbors.find? (· == path.head?) with
-      | some _ => some (path ++ [path.head?])
+      match neighbors.find? (· == path.headD current) with
+      | some _ => some (path ++ [path.headD current])
       | none =>
         neighbors.findSome? fun next =>
           if path.contains next then none
-          else dfs (path ++ [next]) next
+          else dfs fuel (path ++ [next]) next
 
 def DependencyGraph.transitiveDeps (g : DependencyGraph) (name : TheoryName) : List TheoryName :=
-  go [name] []
+  go (g.nodeCount + 1) [name] []
 where
-  go : List TheoryName → List TheoryName → List TheoryName
-    | [], visited => visited
-    | n :: rest, visited =>
-      if visited.contains n then go rest visited
+  go : Nat → List TheoryName → List TheoryName → List TheoryName
+    | 0, _, visited => visited
+    | fuel + 1, [], visited => visited
+    | fuel + 1, n :: rest, visited =>
+      if visited.contains n then go fuel rest visited
       else
         let deps := g.depsOf n
-        go (rest ++ deps) (n :: visited)
+        go fuel (rest ++ deps) (n :: visited)
+
+def DependencyGraph.dependencyClosure (g : DependencyGraph) (name : TheoryName) : List TheoryName :=
+  name :: g.transitiveDeps name
 
 def DependencyGraph.transitiveDependents (g : DependencyGraph) (name : TheoryName) : List TheoryName :=
-  go [name] []
+  go (g.nodeCount + 1) [name] []
 where
-  go : List TheoryName → List TheoryName → List TheoryName
-    | [], visited => visited
-    | n :: rest, visited =>
-      if visited.contains n then go rest visited
+  go : Nat → List TheoryName → List TheoryName → List TheoryName
+    | 0, _, visited => visited
+    | fuel + 1, [], visited => visited
+    | fuel + 1, n :: rest, visited =>
+      if visited.contains n then go fuel rest visited
       else
         let dependents := g.edgesTo n |>.map (·.source)
-        go (rest ++ dependents) (n :: visited)
+        go fuel (rest ++ dependents) (n :: visited)
 
 def DependencyGraph.buildOrder (g : DependencyGraph) : Option (List TheoryName) :=
   g.topologicalOrder
@@ -162,47 +174,44 @@ def DependencyGraph.sccCount (g : DependencyGraph) : Nat :=
 def DependencyGraph.isForest (g : DependencyGraph) : Bool :=
   g.nodes.all fun n => (g.edgesTo n.name).length ≤ 1
 
-/-- A dependency graph is a tree if it is a forest, connected, and acyclic
-    with exactly one root. -/
-def DependencyGraph.isTree (g : DependencyGraph) : Bool :=
-  g.isForest && g.isAcyclic && g.nodeCount > 0
-  && (g.rootTheories.length == 1)
-
 /-- Check if a graph is weakly connected (the undirected underlying graph is connected). -/
 def DependencyGraph.isWeaklyConnected (g : DependencyGraph) : Bool :=
   match g.nodes with
   | [] => true
   | n :: _ =>
-    let reachable := bfs [n.name] []
+    let reachable := bfs (g.nodeCount + 1) [n.name] []
     reachable.length == g.nodeCount
 where
-  bfs : List TheoryName → List TheoryName → List TheoryName
-    | [], visited => visited
-    | x :: rest, visited =>
-      if visited.contains x then bfs rest visited
+  bfs : Nat → List TheoryName → List TheoryName → List TheoryName
+    | 0, _, visited => visited
+    | fuel + 1, [], visited => visited
+    | fuel + 1, x :: rest, visited =>
+      if visited.contains x then bfs fuel rest visited
       else
         let neighbors := (g.edgesFrom x).map (·.target) ++ (g.edgesTo x).map (·.source)
-        bfs (rest ++ neighbors) (x :: visited)
+        bfs fuel (rest ++ neighbors) (x :: visited)
 
 /-- Find weakly connected components. -/
 def DependencyGraph.weaklyConnectedComponents (g : DependencyGraph) : List (List TheoryName) :=
   let allNames := g.nodes.map (·.name)
-  go allNames []
+  go (g.nodeCount + 1) allNames []
 where
-  go : List TheoryName → List (List TheoryName) → List (List TheoryName)
-    | [], acc => acc
-    | name :: rest, acc =>
-      if acc.any (·.contains name) then go rest acc
+  go : Nat → List TheoryName → List (List TheoryName) → List (List TheoryName)
+    | 0, _, acc => acc
+    | fuel + 1, [], acc => acc
+    | fuel + 1, name :: rest, acc =>
+      if acc.any (·.contains name) then go fuel rest acc
       else
-        let comp := bfs [name] []
-        go rest (comp :: acc)
-  bfs : List TheoryName → List TheoryName → List TheoryName
-    | [], visited => visited
-    | x :: rest, visited =>
-      if visited.contains x then bfs rest visited
+        let comp := bfsComp (g.nodeCount + 1) [name] []
+        go fuel rest (comp :: acc)
+  bfsComp : Nat → List TheoryName → List TheoryName → List TheoryName
+    | 0, _, visited => visited
+    | fuel + 1, [], visited => visited
+    | fuel + 1, x :: rest, visited =>
+      if visited.contains x then bfsComp fuel rest visited
       else
         let neighbors := (g.edgesFrom x).map (·.target) ++ (g.edgesTo x).map (·.source)
-        bfs (rest ++ neighbors) (x :: visited)
+        bfsComp fuel (rest ++ neighbors) (x :: visited)
 
 /-- Check if two nodes are in the same weakly connected component. -/
 def DependencyGraph.sameWeakComponent (g : DependencyGraph) (a b : TheoryName) : Bool :=
@@ -217,13 +226,14 @@ def DependencyGraph.isStronglyConnected (g : DependencyGraph) : Bool :=
 /-! ## Graph Analysis Helpers -/
 
 /-- Get all paths of exactly `len` edges from `from` to `to_`. -/
-def DependencyGraph.pathsOfLength (g : DependencyGraph) (from to_ : TheoryName) (len : Nat) : List (List TheoryName) :=
-  go [from] len
+def DependencyGraph.pathsOfLength (g : DependencyGraph) (src to_ : TheoryName) (len : Nat) : List (List TheoryName) :=
+  go (len + 1) [src] len
 where
-  go : List TheoryName → Nat → List (List TheoryName)
-    | _, 0 => []
-    | path, remaining =>
-      let current := path.headD from
+  go : Nat → List TheoryName → Nat → List (List TheoryName)
+    | 0, _, _ => []
+    | fuel + 1, _, 0 => []
+    | fuel + 1, path, remaining =>
+      let current := path.headD src
       if remaining == 1 then
         let nextEdges := g.edgesFrom current
         nextEdges.filterMap fun e =>
@@ -233,11 +243,11 @@ where
         let nextEdges := g.edgesFrom current
         nextEdges.bind fun e =>
           if path.contains e.target then []
-          else go (e.target :: path) (remaining - 1)
+          else go fuel (e.target :: path) (remaining - 1)
 
 /-- Check if there is a path of length exactly n between two nodes. -/
-def DependencyGraph.hasPathOfLength (g : DependencyGraph) (from to_ : TheoryName) (len : Nat) : Bool :=
-  (g.pathsOfLength from to_ len).length > 0
+def DependencyGraph.hasPathOfLength (g : DependencyGraph) (src to_ : TheoryName) (len : Nat) : Bool :=
+  (g.pathsOfLength src to_ len).length > 0
 
 /-- Find all ancestors (nodes that can reach the given node). -/
 def DependencyGraph.ancestors (g : DependencyGraph) (name : TheoryName) : List TheoryName :=
@@ -253,11 +263,6 @@ def DependencyGraph.descendants (g : DependencyGraph) (name : TheoryName) : List
 def DependencyGraph.union (g1 g2 : DependencyGraph) : DependencyGraph :=
   let allNodes := g1.nodes
   let newNodes := g2.nodes.filter (fun n => !allNodes.any (·.name == n.name))
-  let allEdges := g1.edges ++ g2.edges
-  -- Deduplicate edges
-  let edgeSet := allEdges.filterMap fun e =>
-    some (e.source, e.target, e.kind)
-  let edgeSet := edgeSet.eraseDups
   { nodes := allNodes ++ newNodes
   , edges := g1.edges ++ g2.edges
   }
@@ -291,7 +296,7 @@ def DependencyGraph.difference (g1 g2 : DependencyGraph) : DependencyGraph :=
     { nodes := [ TheoryNode.simple a "A" "1" ""
                , TheoryNode.simple b "B" "1" "" ]
     , edges := [{ source := b, target := a, kind := .import, description := none }] }
-  (g.isForest, g.isTree, g.inDegree a, g.outDegree a)
+  (g.isForest, g.isAcyclic, g.inDegree a, g.outDegree a)
 
 #eval
   let a := TheoryName.ofString "A"

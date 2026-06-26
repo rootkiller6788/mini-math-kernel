@@ -62,15 +62,16 @@ of the selected nodes.
 -/
 
 def DependencyGraph.downwardClosure (g : DependencyGraph) (names : List TheoryName) : List TheoryName :=
-  go names []
+  go (g.nodeCount + 1) names []
 where
-  go : List TheoryName → List TheoryName → List TheoryName
-    | [], visited => visited
-    | n :: rest, visited =>
-      if visited.contains n then go rest visited
+  go : Nat → List TheoryName → List TheoryName → List TheoryName
+    | 0, _, visited => visited
+    | fuel + 1, [], visited => visited
+    | fuel + 1, n :: rest, visited =>
+      if visited.contains n then go fuel rest visited
       else
         let deps := g.depsOf n
-        go (rest ++ deps) (n :: visited)
+        go fuel (rest ++ deps) (n :: visited)
 
 def DependencyGraph.closedSubgraph (g : DependencyGraph) (names : List TheoryName) : DependencyGraph :=
   let closure := g.downwardClosure names

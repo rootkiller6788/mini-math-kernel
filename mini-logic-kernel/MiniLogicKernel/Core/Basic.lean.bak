@@ -321,18 +321,6 @@ def decideTautology (f : Formula) : Bool :=
 /-! ## Evaluation Depends Only on Atoms -/
 
 /-- Every atom in a formula is bounded by maxAtom. -/
-theorem mem_append {α : Type} {a : α} {l₁ l₂ : List α} : a ∈ l₁ ++ l₂ ↔ a ∈ l₁ ∨ a ∈ l₂ := by
-  induction l₁ with
-  | nil => simp
-  | cons x xs ih => simp [ih, or_assoc]
-
-/-- If a ∈ l then a ∈ l ++ l'. -/
-theorem mem_append_left {α : Type} {a : α} {l₁ l₂ : List α} (h : a ∈ l₁) : a ∈ l₁ ++ l₂ :=
-  (mem_append.mpr (Or.inl h))
-
-/-- If a ∈ l' then a ∈ l ++ l'. -/
-theorem mem_append_right {α : Type} {a : α} {l₁ l₂ : List α} (h : a ∈ l₂) : a ∈ l₁ ++ l₂ :=
-  (mem_append.mpr (Or.inr h))
 theorem Formula.atom_le_maxAtom (f : Formula) : ∀ n ∈ f.atoms, n ≤ f.maxAtom := by
   induction f with
   | atom m => simp [Formula.atoms, Formula.maxAtom]
@@ -532,6 +520,18 @@ theorem EquivClass.ext {A B : Formula} (h : logEquiv A B) : EquivClass A = Equiv
 /-! ## List Utility Functions -/
 
 /-- Membership in an appended list decomposes into left/right membership. -/
+theorem mem_append {α : Type} {a : α} {l₁ l₂ : List α} : a ∈ l₁ ++ l₂ ↔ a ∈ l₁ ∨ a ∈ l₂ := by
+  induction l₁ with
+  | nil => simp
+  | cons x xs ih => simp [ih, or_assoc]
+
+/-- If a ∈ l then a ∈ l ++ l'. -/
+theorem mem_append_left {α : Type} {a : α} {l₁ l₂ : List α} (h : a ∈ l₁) : a ∈ l₁ ++ l₂ :=
+  (mem_append.mpr (Or.inl h))
+
+/-- If a ∈ l' then a ∈ l ++ l'. -/
+theorem mem_append_right {α : Type} {a : α} {l₁ l₂ : List α} (h : a ∈ l₂) : a ∈ l₁ ++ l₂ :=
+  (mem_append.mpr (Or.inr h))
 
 /-- Check if all elements of a list satisfy a predicate. -/
 def listAll {α : Type} (l : List α) (p : α → Bool) : Bool :=

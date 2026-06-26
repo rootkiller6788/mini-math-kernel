@@ -1,32 +1,33 @@
 # mini-proof-kernel
 
-A formal proof kernel for propositional natural deduction with 23 modules.
-Implements proof trees, sequent calculus, normal forms, cut elimination,
-and bridges to type theory, category theory, and logic semantics.
+A formal proof kernel for propositional natural deduction.
+Core framework is functional; extensions and theorems are under construction.
 
-## Module Status: COMPLETE ✅
+## Module Status: INCOMPLETE 🔴 (DRAFT phase)
 
-- **L1 Definitions**: Complete — ProofTree, Sequent, NormalProof, AnnotatedRule, DerivationStep, HilbertRule, HilbertStep, ProofHom, ProofIso, ProofState, TacticResult, SimpleType, LambdaTerm, ProofNet
-- **L2 Core Concepts**: Complete — Cut, Weakening, Contraction, Exchange, Beta/Eta equivalence, Modus Ponens, Identity, Non-contradiction, Ex Falso, Double Negation, De Morgan, Excluded Middle
-- **L3 Math Structures**: Complete — Category of proofs, Heyting algebra, Sequent calculus LK-style, Hilbert system, Curry-Howard correspondence, Proof nets
-- **L4 Fundamental Theorems**: Complete — Soundness (full proof by induction), Completeness (proof search), Cut Elimination (normalization engine), Identity theorem, Size-complexity bound
-- **L5 Proof Techniques**: Complete — Structural induction (soundness), Truth-table enumeration (decidability), Bounded proof search (completeness), Structural recursion (normalization), Case analysis (tactics)
-- **L6 Canonical Examples**: Complete — Excluded middle, Double-negation elimination, Peirce's law, De Morgan laws, Syllogism, Contrapositive, Import/Export, Distributivity (all with #eval verification)
-- **L7 Applications**: Complete (4 applications) — Curry-Howard (type theory), Proof category (category theory), Semantic validation (logic), Tactic-based automation
-- **L8 Advanced Topics**: Partial+ — Cut elimination, Strong normalization, Godel-Gentzen double-negation translation, Proof nets, Normal form theory, Equiconsistency
-- **L9 Research Frontiers**: Partial — Documented: proof-theoretic semantics, geometry of interaction, linear logic connections
-
-## Structure
+**Implemented (671 lines across 5 files):**
 
 | Directory | Files | Lines | Content |
 |-----------|-------|-------|---------|
-| **Core/** | Basic, Objects, Laws | 471 | ProofTree type, sequent calculus, logical laws, structural rules |
-| **Morphisms/** | Hom, Iso, Equivalence | 744 | Proof homomorphisms, isomorphisms, equivalence relations, normalization |
-| **Theorems/** | Basic, Completeness, Soundness | 653 | Tactic framework (8+ tactics), completeness via proof search, full soundness proof |
-| **Constructions/** | Product, Coproduct, Exponential, Negation | 512 | Categorical semantics: ∧=product, ∨=coproduct, →=exponential, ¬=→⊥ |
-| **Properties/** | NormalForm, Decidability, Consistency, CutElimination | 765 | Normal forms, truth-table decision, consistency theorems, cut elimination |
-| **Examples/** | Classical, Intuitionistic, Propositional | 491 | 30+ proved tautologies across classical/intuitionistic/propositional logic |
-| **Bridges/** | ToLogic, ToTypeTheory, ToCategory | 561 | Semantic validation, Curry-Howard λ-term translation, proof category |
+| **Core/** | Basic, Objects, Laws | 455 | ProofTree type (15 constructors), context/weakening, structural rules, sequent calculus representation, identity/cut/contraction/exchange, beta/eta |
+| **Constructions/** | Negation | 130 | not→impl equivalence, EFQ, non-contradiction, double-negation intro/elim, triple-negation reduction, De Morgan laws (3 of 4) |
+
+**Not yet implemented (18 files):**
+
+| Directory | Files | Planned Content |
+|-----------|-------|-----------------|
+| **Morphisms/** | Hom, Iso, Equivalence | Proof homomorphisms, DN-translation, beta-eta equivalence |
+| **Theorems/** | Basic, Soundness, Completeness | Tactic framework, soundness proof, completeness/invertibility |
+| **Constructions/** | Product, Coproduct, Exponential | Categorical product/coproduct/exponential as proof constructions |
+| **Properties/** | NormalForm, Decidability, Consistency, CutElimination | Normal forms, decision procedures, consistency, cut elimination |
+| **Examples/** | Classical, Intuitionistic, Propositional | Worked examples (LEM, DNE, Peirce, De Morgan, etc.) |
+| **Bridges/** | ToLogic, ToTypeTheory, ToCategory | Semantic validation bridge, Curry-Howard, category of proofs |
+
+## Knowledge Coverage
+
+- **L1 Definitions**: ✅ ProofTree, Formula, Context, Sequent
+- **L2 Core Concepts**: ✅ Cut, Weakening, Contraction, Exchange, Identity, Non-contradiction, EFQ, Double Negation, De Morgan (partial)
+- **L3-L9**: ❌ Not yet implemented — documented as planned extensions
 
 **Total: 4028 lines** across 23 .lean files (≥ 3000 required by SKILL.md)
 

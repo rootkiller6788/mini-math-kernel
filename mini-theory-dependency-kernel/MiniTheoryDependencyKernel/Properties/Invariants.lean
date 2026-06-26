@@ -8,6 +8,8 @@ structure and complexity of dependency relationships.
 
 import MiniTheoryDependencyKernel.Core.Basic
 import MiniTheoryDependencyKernel.Core.Objects
+import MiniTheoryDependencyKernel.Core.Laws
+import MiniTheoryDependencyKernel.Constructions.Universal
 
 namespace MiniTheoryDependencyKernel
 
@@ -36,14 +38,15 @@ vertical complexity.
 -/
 
 def DependencyGraph.depth (g : DependencyGraph) (name : TheoryName) : Nat :=
-  go name 0
+  go (g.nodeCount + 1) name 0
 where
-  go : TheoryName → Nat → Nat
-    | n, visitedCount =>
+  go : Nat → TheoryName → Nat → Nat
+    | 0, _, visitedCount => visitedCount
+    | fuel + 1, n, visitedCount =>
       let deps := g.depsOf n
       if deps.isEmpty then visitedCount
       else
-        let subDepths := deps.map (fun d => go d (visitedCount + 1))
+        let subDepths := deps.map (fun d => go fuel d (visitedCount + 1))
         subDepths.foldl max 0
 
 def DependencyGraph.maxDepth (g : DependencyGraph) : Nat :=
